@@ -1,0 +1,40 @@
+# === Root ===
+.env
+.env.local
+.env.*.local
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+package-lock.json
+
+
+# IDE / OS junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# === Backend (Node.js/Express) ===
+/node_modules/
+/.env
+/.env.local
+/logs/
+/package-lock.json
+
+# === Frontend (React) ===
+/node_modules/
+/.env
+/.env.local
+/.env.*.local
+/build/
+/package-lock.json
+
+# === MongoDB dump files ===
+dump/
+*.gz
+
+# === Others ===
+.vscode/
+.idea/
