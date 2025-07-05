@@ -6,6 +6,12 @@ const feedbackSchema = new mongoose.Schema({
         required: [true, 'comment is required'],
         trim: true
     },
+    satisfactionScore: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -25,4 +31,4 @@ const feedbackSchema = new mongoose.Schema({
 
 const feedbackModel = mongoose.model("feedbacks", feedbackSchema);
 
-module.exports = feedbackModel; 
+module.exports = feedbackModel;

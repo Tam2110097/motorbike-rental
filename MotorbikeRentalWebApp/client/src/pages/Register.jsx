@@ -33,11 +33,14 @@ const Register = () => {
         <div className="form-container">
             <Form layout='vertical' onFinish={onFinishHandler} className="register-form">
                 <h3 className='text-center'>Register Form</h3>
-                <Form.Item label='Name' name="name">
+                <Form.Item label='Full Name' name="fullName">
                     <Input type='text' required />
                 </Form.Item>
                 <Form.Item label='Email' name="email">
                     <Input type='email' required />
+                </Form.Item>
+                <Form.Item label='Phone' name="phone">
+                    <Input type='text' required />
                 </Form.Item>
                 <Form.Item label='Password' name="password">
                     <Input type='password' required />

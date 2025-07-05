@@ -10,7 +10,7 @@ const BranchPage = () => {
 
     const getAllBranches = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/v1/admin/branch/get-all-branches');
+            const res = await axios.get('http://localhost:8080/api/v1/admin/branch/get-all');
             if (res.data.success) {
                 setBranches(res.data.branches);
             }

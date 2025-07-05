@@ -6,6 +6,7 @@ import { hideLoading, showLoading } from "../../../redux/features/alertSlice";
 import axios from "axios";
 import AdminLayout from "../../../components/AdminLayout";
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import BackButton from "../../../components/BackButton";
 
 const CreateAccountPage = () => {
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ const CreateAccountPage = () => {
             dispatch(showLoading());
             console.log('Sending data:', values);
             const res = await axios.post(
-                "http://localhost:8080/api/v1/admin/account/create-account",
+                "http://localhost:8080/api/v1/admin/account/create",
                 values,
                 // {
                 //     headers: {
@@ -44,19 +45,9 @@ const CreateAccountPage = () => {
         <AdminLayout>
             <div className="p-4">
                 {/* Back Button */}
-                <div className="mb-4">
-                    <Link to="/admin/account">
-                        <Button
-                            type="default"
-                            icon={<ArrowLeftOutlined />}
-                            size="large"
-                        >
-                            Quay lại
-                        </Button>
-                    </Link>
-                </div>
-
+                <BackButton path="/admin/account" />
                 <Form
+                    style={{ maxWidth: 600, margin: "0 auto" }}
                     layout="vertical"
                     onFinish={onFinishHandler}
                     form={form}
@@ -91,20 +82,12 @@ const CreateAccountPage = () => {
                         <Input type="tel" />
                     </Form.Item>
                     <Form.Item
-                        label="Địa chỉ"
-                        name="address"
-                        rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
-                    >
-                        <Input />
-                    </Form.Item>
-                    <Form.Item
                         label="Vai trò"
-                        name="userType"
+                        name="roleName"
                         rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
                     >
                         <Select
                             placeholder="Chọn vai trò"
-                        // onChange={(value) => setUserType(value)}
                         >
                             <Select.Option value="admin">Admin</Select.Option>
                             <Select.Option value="employee">Nhân viên</Select.Option>

@@ -6,11 +6,6 @@ const rentalOrderSchema = new mongoose.Schema({
         ref: 'customers',
         required: [true, 'customerId is required']
     },
-    processedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'employees',
-        required: [true, 'processedBy is required']
-    },
     branchReceive: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'branches',
@@ -34,17 +29,6 @@ const rentalOrderSchema = new mongoose.Schema({
         enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled'],
         default: 'pending'
     },
-    accessories: [{
-        accessory: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'accessories'
-        },
-        quantity: {
-            type: Number,
-            required: true,
-            min: 1
-        }
-    }],
     evidenceImage: {
         type: String,
         required: [true, 'evidenceImage is required']
@@ -63,18 +47,11 @@ const rentalOrderSchema = new mongoose.Schema({
         required: [true, 'grandTotal is required'],
         min: [0, 'grandTotal cannot be negative']
     },
-    motorbikes: [{
-        motorbike: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'motorbikes',
-            required: true
-        },
-        rentalFee: {
-            type: Number,
-            required: true,
-            min: 0
-        }
-    }],
+    motorbikes: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: 'motorbikes',
+        required: [true, 'motorbikes is required']
+    },
     createdAt: {
         type: Date,
         default: Date.now

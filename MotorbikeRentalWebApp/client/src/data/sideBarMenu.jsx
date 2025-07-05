@@ -1,28 +1,37 @@
 import { Link } from "react-router-dom";
-import { LaptopOutlined, NotificationOutlined, UserOutlined, HomeOutlined } from '@ant-design/icons';
+import {
+    LaptopOutlined, NotificationOutlined, UserOutlined,
+    HomeOutlined, MoneyCollectOutlined, BranchesOutlined,
+    SettingOutlined,
+} from '@ant-design/icons';
 // =================Employee Menu================
 export const employeeMenu = [
     {
-        name: "Home",
-        path: "/",
-        icon: "fa-solid fa-house",
+        path: "/employee",
+        icon: HomeOutlined,
+        label: "Home"
     },
-];
-// =================Employee Menu================
-
-//admin menu
-// export const adminMenu = [
-//     {
-//         name: "Home",
-//         path: "/",
-//         icon: "fa-solid fa-house",
-//     },
-//     {
-//         name: "Quản lý tài khoản",
-//         path: "/admin/account",
-//         icon: "fas fa-users",
-//     }
-// ];
+    {
+        path: "/employee/accessory",
+        icon: UserOutlined,
+        label: "Quản lý sản phẩm"
+    },
+    {
+        path: "/employee/motorbike",
+        icon: HomeOutlined,
+        label: "Quản lý xe máy"
+    },
+    {
+        path: "/employee/rented-motorbike",
+        icon: NotificationOutlined,
+        label: "Xe đang được thuê",
+    },
+    {
+        path: "/employee/status-order",
+        icon: NotificationOutlined,
+        label: "Trạng thái đơn hàng",
+    },
+]
 
 //admin menu
 export const adminMenu = [
@@ -38,8 +47,23 @@ export const adminMenu = [
     },
     {
         path: "/admin/branch",
-        icon: HomeOutlined,
+        icon: BranchesOutlined,
         label: "Quản lý chi nhánh"
+    },
+    {
+        path: "/admin/motorbike-type",
+        icon: HomeOutlined,
+        label: "Quản lý loại xe máy"
+    },
+    {
+        path: "/admin/pricing-rule",
+        icon: MoneyCollectOutlined,
+        label: "Quy tắc giá thuê"
+    },
+    {
+        path: "/admin/specification",
+        icon: SettingOutlined,
+        label: "Quản lý thông số kỹ thuật"
     },
     {
         path: "/admin/feedback",

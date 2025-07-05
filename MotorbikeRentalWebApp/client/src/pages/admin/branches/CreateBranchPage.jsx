@@ -6,6 +6,7 @@ import { hideLoading, showLoading } from "../../../redux/features/alertSlice";
 import axios from "axios";
 import AdminLayout from "../../../components/AdminLayout";
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import BackButton from "../../../components/BackButton";
 
 const CreateBranchPage = () => {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ const CreateBranchPage = () => {
             dispatch(showLoading());
             console.log('Sending data:', values);
             const res = await axios.post(
-                "http://localhost:8080/api/v1/admin/branch/create-branch",
+                "http://localhost:8080/api/v1/admin/branch/create",
                 values,
                 // {
                 //     headers: {
@@ -43,19 +44,9 @@ const CreateBranchPage = () => {
         <AdminLayout>
             <div className="p-4">
                 {/* Back Button */}
-                <div className="mb-4">
-                    <Link to="/admin/branch">
-                        <Button
-                            type="default"
-                            icon={<ArrowLeftOutlined />}
-                            size="large"
-                        >
-                            Quay lại
-                        </Button>
-                    </Link>
-                </div>
-
+                <BackButton path="/admin/branch" />
                 <Form
+                    style={{ maxWidth: 600, margin: "0 auto" }}
                     layout="vertical"
                     onFinish={onFinishHandler}
                     form={form}

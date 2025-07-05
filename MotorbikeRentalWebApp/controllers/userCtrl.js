@@ -1,4 +1,5 @@
 const userModel = require('../models/userModels');
+const roleModel = require('../models/roleModels');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -14,11 +15,26 @@ const registerController = async (req, res) => {
             })
         }
 
+        // Find or create customer role
+        let customerRole = await roleModel.findOne({ name: 'customer' });
+        if (!customerRole) {
+            customerRole = new roleModel({ name: 'customer' });
+            await customerRole.save();
+        }
+
         const password = req.body.password;
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        req.body.password = hashedPassword;
-        const newUser = new userModel(req.body);
+
+        // Create new user with customer role
+        const newUser = new userModel({
+            fullName: req.body.fullName,
+            email: req.body.email,
+            password: hashedPassword,
+            phone: req.body.phone,
+            role: customerRole._id
+        });
+
         await newUser.save();
         res.status(201).send({
             message: 'Register Successfully',
@@ -34,10 +50,10 @@ const registerController = async (req, res) => {
     }
 };
 
-//login callba
+//login callback
 const loginController = async (req, res) => {
     try {
-        const user = await userModel.findOne({ email: req.body.email });
+        const user = await userModel.findOne({ email: req.body.email }).populate('role');
         if (!user) {
             return res.status(200).send({
                 message: 'User not found',
@@ -58,6 +74,13 @@ const loginController = async (req, res) => {
             message: 'Login Success',
             success: true,
             token: token,
+            user: {
+                id: user._id,
+                fullName: user.fullName,
+                email: user.email,
+                phone: user.phone,
+                role: user.role
+            }
         });
     } catch (error) {
         console.log(error);
@@ -69,7 +92,7 @@ const loginController = async (req, res) => {
 
 const authController = async (req, res) => {
     try {
-        const user = await userModel.findOne({ _id: req.body.userId });
+        const user = await userModel.findOne({ _id: req.body.userId }).populate('role');
         if (!user) {
             res.status(200).send({
                 message: 'User not found',
@@ -80,8 +103,11 @@ const authController = async (req, res) => {
             res.status(200).send({
                 success: true,
                 data: {
-                    name: user.name,
+                    id: user._id,
+                    fullName: user.fullName,
                     email: user.email,
+                    phone: user.phone,
+                    role: user.role
                 }
             })
         }

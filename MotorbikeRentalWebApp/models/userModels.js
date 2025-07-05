@@ -20,14 +20,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'phone is required']
     },
-    address: {
-        type: String,
-        required: [true, 'address is required']
-    },
-    userType: {
-        type: String,
-        enum: ['customer', 'admin', 'employee'],
-        default: 'customer'
+    role: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'roles',
+        required: [true, 'role is required']
     }
 }, {
     timestamps: true

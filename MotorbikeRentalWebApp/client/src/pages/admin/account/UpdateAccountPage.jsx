@@ -6,6 +6,7 @@ import { useDispatch } from "react-redux";
 import { hideLoading, showLoading } from "../../../redux/features/alertSlice";
 import axios from "axios";
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import BackButton from "../../../components/BackButton";
 
 const UpdateAccountPage = () => {
     const { id } = useParams();
@@ -16,7 +17,7 @@ const UpdateAccountPage = () => {
     const getAccountById = async () => {
         try {
             const res = await axios.get(
-                `http://localhost:8080/api/v1/admin/account/get-user-by-id/${id}`
+                `http://localhost:8080/api/v1/admin/account/get-by-id/${id}`
             );
             if (res.data.success) {
                 const accountData = res.data.user;
@@ -24,8 +25,7 @@ const UpdateAccountPage = () => {
                     fullName: accountData.fullName,
                     email: accountData.email,
                     phone: accountData.phone,
-                    address: accountData.address,
-                    userType: accountData.userType,
+                    roleName: accountData.role?.name,
                 });
             }
         } catch {
@@ -37,7 +37,7 @@ const UpdateAccountPage = () => {
         try {
             dispatch(showLoading());
             const res = await axios.put(
-                `http://localhost:8080/api/v1/admin/account/update-account/${id}`,
+                `http://localhost:8080/api/v1/admin/account/update/${id}`,
                 {
                     ...values,
                 },
@@ -69,18 +69,13 @@ const UpdateAccountPage = () => {
         <AdminLayout>
             <div className="p-4">
                 {/* Back Button */}
-                <div className="mb-4">
-                    <Link to="/admin/account">
-                        <Button
-                            type="default"
-                            icon={<ArrowLeftOutlined />}
-                            size="large"
-                        >
-                            Quay lại
-                        </Button>
-                    </Link>
-                </div>
-                <Form form={form} layout="vertical" onFinish={handleUpdateAccount}>
+                <BackButton path="/admin/account" />
+                <Form
+                    style={{ maxWidth: 600, margin: "0 auto" }}
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleUpdateAccount}
+                >
                     <h3 className="text-center">CẬP NHẬT TÀI KHOẢN</h3>
 
                     <Form.Item
@@ -106,15 +101,8 @@ const UpdateAccountPage = () => {
                         <Input type="tel" />
                     </Form.Item>
                     <Form.Item
-                        label="Địa chỉ"
-                        name="address"
-                        rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
-                    >
-                        <Input />
-                    </Form.Item>
-                    <Form.Item
                         label="Vai trò"
-                        name="userType"
+                        name="roleName"
                         rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
                     >
                         <Select

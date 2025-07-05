@@ -12,7 +12,7 @@ const motorbikeTypeSchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        required: [true, 'description is required']
+        required: [false, 'description is not required']
     },
     totalQuantity: {
         type: Number,
@@ -24,11 +24,6 @@ const motorbikeTypeSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'deposit is required'],
         min: [0, 'deposit cannot be negative']
-    },
-    rentalFee: {
-        type: Number,
-        required: [true, 'rentalFee is required'],
-        min: [0, 'rentalFee cannot be negative']
     },
     image: {
         type: String,
@@ -42,6 +37,20 @@ const motorbikeTypeSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'preDeposit is required'],
         min: [0, 'preDeposit cannot be negative']
+    },
+    dailyDamageWaiver: {
+        type: Number,
+        required: [true, 'dailyDamageWaiver is required'],
+        min: [0, 'dailyDamageWaiver cannot be negative']
+    },
+    pricingRule: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'pricingRules',
+        required: [true, 'pricingRule is required']
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     }
 }, {
     timestamps: true

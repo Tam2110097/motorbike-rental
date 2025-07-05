@@ -15,7 +15,7 @@ const DeleteAccountPage = () => {
         dispatch(showLoading()); // Hiển thị loading trước khi gọi API
         try {
             const res = await axios.delete(
-                `http://localhost:8080/api/v1/admin/account/delete-account/${id}`,
+                `http://localhost:8080/api/v1/admin/account/delete/${id}`,
                 // {
                 //   headers: {
                 //     Authorization: "Bearer " + localStorage.getItem("token"),

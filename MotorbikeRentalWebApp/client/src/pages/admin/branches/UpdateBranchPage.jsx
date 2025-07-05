@@ -6,6 +6,7 @@ import { useDispatch } from "react-redux";
 import { hideLoading, showLoading } from "../../../redux/features/alertSlice";
 import axios from "axios";
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import BackButton from "../../../components/BackButton";
 
 const UpdateBranchPage = () => {
     const { id } = useParams();
@@ -17,7 +18,7 @@ const UpdateBranchPage = () => {
     const getBranchById = async () => {
         try {
             const res = await axios.get(
-                `http://localhost:8080/api/v1/admin/branch/get-branch-by-id/${id}`
+                `http://localhost:8080/api/v1/admin/branch/get-by-id/${id}`
             );
             if (res.data.success) {
                 const branchData = res.data.branch;
@@ -38,7 +39,7 @@ const UpdateBranchPage = () => {
         try {
             dispatch(showLoading());
             const res = await axios.put(
-                `http://localhost:8080/api/v1/admin/branch/update-branch/${id}`,
+                `http://localhost:8080/api/v1/admin/branch/update/${id}`,
                 {
                     ...values,
                 },
@@ -70,21 +71,12 @@ const UpdateBranchPage = () => {
         <AdminLayout>
             <div className="p-4">
                 {/* Back Button */}
-                <div className="mb-4">
-                    <Link to="/admin/branch">
-                        <Button
-                            type="default"
-                            icon={<ArrowLeftOutlined />}
-                            size="large"
-                        >
-                            Quay lại
-                        </Button>
-                    </Link>
-                </div>
+                <BackButton path="/admin/branch" />
                 <Form
                     form={form}
                     layout="vertical"
                     onFinish={handleUpdateBranch}
+                    style={{ maxWidth: 600, margin: "0 auto" }}
                     initialValues={{
                         isActive: isActive
                     }}

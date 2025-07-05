@@ -12,7 +12,7 @@ const AccountPage = () => {
 
     const getAllAccounts = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/v1/admin/account/get-all-users');
+            const res = await axios.get('http://localhost:8080/api/v1/admin/account/get-all');
             if (res.data.success) {
                 setAccounts(res.data.users);
             }
@@ -24,8 +24,8 @@ const AccountPage = () => {
         getAllAccounts();
     }, []);
 
-    const renderTable = (userType) => {
-        const filteredAccounts = accounts.filter((acc) => acc.userType === userType);
+    const renderTable = (roleName) => {
+        const filteredAccounts = accounts.filter((acc) => acc.role?.name === roleName);
         return (
             <table className="table table-bordered table-hover">
                 <thead className="table-dark text-center">
@@ -34,8 +34,8 @@ const AccountPage = () => {
                         <th>Họ và tên</th>
                         <th>Email</th>
                         <th>Số điện thoại</th>
-                        <th>Địa chỉ</th>
-                        {/* {userType === "employee" && <th>Ngày nhận việc</th>} */}
+                        <th>Vai trò</th>
+                        {/* {roleName === "employee" && <th>Ngày nhận việc</th>} */}
                         <th>Hành động</th>
                     </tr>
                 </thead>
@@ -46,8 +46,8 @@ const AccountPage = () => {
                             <td>{account.fullName}</td>
                             <td>{account.email}</td>
                             <td>{account.phone}</td>
-                            <td>{account.address}</td>
-                            {/* {role === "employee" && (
+                            <td>{account.role?.name || 'Unknown'}</td>
+                            {/* {roleName === "employee" && (
                     <td>{new Date(account?.hire_date).toLocaleDateString()}</td>
                   )} */}
                             <td>

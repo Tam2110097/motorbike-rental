@@ -1,4 +1,5 @@
 const userModel = require('../../models/userModels');
+const roleModel = require('../../models/roleModels');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -6,10 +7,10 @@ const jwt = require('jsonwebtoken');
 const createAccount = async (req, res) => {
     try {
         console.log('>>>>>>>>>>>>>>>>', req.body);
-        const { fullName, email, password, phone, address, userType } = req.body;
+        const { fullName, email, password, phone, roleName } = req.body;
 
         // Validate required fields
-        if (!fullName || !email || !password || !phone || !address || !userType) {
+        if (!fullName || !email || !password || !phone || !roleName) {
             return res.status(400).json({
                 success: false,
                 message: 'Tất cả các trường là bắt buộc',
@@ -18,8 +19,7 @@ const createAccount = async (req, res) => {
                     email: !email,
                     password: !password,
                     phone: !phone,
-                    address: !address,
-                    userType: !userType
+                    roleName: !roleName
                 }
             });
         }
@@ -33,9 +33,9 @@ const createAccount = async (req, res) => {
             });
         }
 
-        // Validate userType
-        const validUserTypes = ['admin', 'employee', 'customer'];
-        if (!validUserTypes.includes(userType)) {
+        // Validate roleName
+        const validRoleNames = ['admin', 'employee', 'customer'];
+        if (!validRoleNames.includes(roleName)) {
             return res.status(400).json({
                 success: false,
                 message: 'Loại người dùng không hợp lệ'
@@ -51,6 +51,13 @@ const createAccount = async (req, res) => {
             });
         }
 
+        // Find or create role
+        let role = await roleModel.findOne({ name: roleName });
+        if (!role) {
+            role = new roleModel({ name: roleName });
+            await role.save();
+        }
+
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -61,8 +68,7 @@ const createAccount = async (req, res) => {
             email,
             password: hashedPassword,
             phone,
-            address,
-            userType: userType || 'customer'
+            role: role._id
         });
 
         await newUser.save();
@@ -75,8 +81,7 @@ const createAccount = async (req, res) => {
                 fullName: newUser.fullName,
                 email: newUser.email,
                 phone: newUser.phone,
-                address: newUser.address,
-                userType: newUser.userType
+                role: role
             }
         });
 
@@ -93,7 +98,7 @@ const createAccount = async (req, res) => {
 // Get all users controller
 const getAllUsers = async (req, res) => {
     try {
-        const users = await userModel.find({}).select('-password');
+        const users = await userModel.find({}).populate('role').select('-password');
 
         res.status(200).json({
             success: true,
@@ -115,7 +120,7 @@ const getAllUsers = async (req, res) => {
 const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await userModel.findById(id).select('-password');
+        const user = await userModel.findById(id).populate('role').select('-password');
 
         if (!user) {
             return res.status(404).json({
@@ -144,7 +149,7 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { fullName, email, phone, address, userType } = req.body;
+        const { fullName, email, phone, roleName } = req.body;
 
         // Check if user exists
         const existingUser = await userModel.findById(id);
@@ -166,6 +171,13 @@ const updateUser = async (req, res) => {
             }
         }
 
+        // Find or create role
+        let role = await roleModel.findOne({ name: roleName });
+        if (!role) {
+            role = new roleModel({ name: roleName });
+            await role.save();
+        }
+
         // Update user
         const updatedUser = await userModel.findByIdAndUpdate(
             id,
@@ -173,11 +185,10 @@ const updateUser = async (req, res) => {
                 fullName,
                 email,
                 phone,
-                address,
-                userType
+                role: role._id
             },
             { new: true }
-        ).select('-password');
+        ).populate('role').select('-password');
 
         res.status(200).json({
             success: true,
