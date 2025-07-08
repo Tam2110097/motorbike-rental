@@ -39,6 +39,8 @@ import MotorbikePage from './pages/employee/motorbike/MotorbikePage'
 import CreateMotorbikePage from './pages/employee/motorbike/CreateMotorbikePage'
 import UpdateMotorbikePage from './pages/employee/motorbike/UpdateMotorbikePage'
 import DeleteMotorbikePage from './pages/employee/motorbike/DeleteMotorbikePage'
+import AvailableMotorbikePage from './pages/customer/booking/AvailableMotorbikePage'
+import MotorbikeDetailPage from './pages/customer/booking/MotorbikeDetailPage'
 
 function App() {
 
@@ -90,6 +92,9 @@ function App() {
           <Route path='/employee/motorbike/create' element={<CreateMotorbikePage />} />
           <Route path='/employee/motorbike/update/:id' element={<UpdateMotorbikePage />} />
           <Route path='/employee/motorbike/delete/:id' element={<DeleteMotorbikePage />} />
+          {/* ====customer==== */}
+          <Route path='/booking/available-motorbike' element={<AvailableMotorbikePage />} />
+          <Route path='/motorbike-detail/:id' element={<MotorbikeDetailPage />} />
         </Routes>
       </BrowserRouter>
     </>

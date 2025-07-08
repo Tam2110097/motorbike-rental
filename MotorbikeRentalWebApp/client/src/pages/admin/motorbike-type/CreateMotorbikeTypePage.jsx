@@ -108,7 +108,7 @@ const CreateMotorbikeTypePage = () => {
                         if (!isNaN(price)) {
                             const autoDeposit = Math.floor(price * 0.3);
                             const autoPreDeposit = Math.floor(autoDeposit * 0.5);
-                            const autoDailyDamageWaiver = Math.floor(price * 0.1);
+                            const autoDailyDamageWaiver = Math.floor(price * 0.01);
                             form.setFieldsValue({
                                 deposit: autoDeposit,
                                 preDeposit: autoPreDeposit,

@@ -116,20 +116,27 @@ motorbikeSchema.post('save', async function (doc, next) {
     }
 });
 
-// Khi xóa motorbike -> giảm totalQuantity
-motorbikeSchema.post('findOneAndDelete', async function (doc, next) {
-    if (doc) {
-        try {
+// Ghi nhớ thông tin trước khi xóa
+motorbikeSchema.pre('findOneAndDelete', async function (next) {
+    this._docToDelete = await this.model.findOne(this.getFilter());
+    next();
+});
+
+motorbikeSchema.post('findOneAndDelete', async function (_, next) {
+    try {
+        const doc = this._docToDelete;
+        if (doc) {
             await mongoose.model('motorbikeTypes').findByIdAndUpdate(
                 doc.motorbikeType,
                 { $inc: { totalQuantity: -1 } }
             );
-        } catch (error) {
-            return next(error);
         }
+        next();
+    } catch (error) {
+        next(error);
     }
-    next();
 });
+
 
 const motorbikeModel = mongoose.model("motorbikes", motorbikeSchema);
 

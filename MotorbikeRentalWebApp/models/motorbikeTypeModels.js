@@ -31,12 +31,19 @@ const motorbikeTypeSchema = new mongoose.Schema({
     },
     prefixCode: {
         type: String,
-        required: [true, 'prefixCode is required']
+        required: [true, 'prefixCode is required'],
+        unique: true
     },
     preDeposit: {
         type: Number,
         required: [true, 'preDeposit is required'],
-        min: [0, 'preDeposit cannot be negative']
+        min: [0, 'preDeposit cannot be negative'],
+        validate: {
+            validator: function (val) {
+                return val <= this.deposit;
+            },
+            message: 'preDeposit must be less than or equal to deposit'
+        }
     },
     dailyDamageWaiver: {
         type: Number,
@@ -46,7 +53,8 @@ const motorbikeTypeSchema = new mongoose.Schema({
     pricingRule: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'pricingRules',
-        required: [true, 'pricingRule is required']
+        required: [true, 'pricingRule is required'],
+        index: true
     },
     isActive: {
         type: Boolean,
@@ -55,6 +63,16 @@ const motorbikeTypeSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+motorbikeTypeSchema.virtual('specifications', {
+    ref: 'motorbikeTypeSpecifications',
+    localField: '_id',
+    foreignField: 'motorbikeType',
+    justOne: false
+});
+
+motorbikeTypeSchema.set('toObject', { virtuals: true });
+motorbikeTypeSchema.set('toJSON', { virtuals: true });
 
 const motorbikeTypeModel = mongoose.model("motorbikeTypes", motorbikeTypeSchema);
 

@@ -107,11 +107,27 @@ const UpdateMotorbikeTypePage = () => {
                     layout="vertical"
                     onFinish={onFinishHandler}
                     onValuesChange={(changedValues) => {
+                        // Khi giá thay đổi thì tự động tính các khoản khác
+                        if (changedValues.price) {
+                            const price = parseFloat(changedValues.price);
+                            if (!isNaN(price)) {
+                                const autoDeposit = Math.floor(price * 0.3);
+                                const autoPreDeposit = Math.floor(autoDeposit * 0.1);
+                                const autoDailyDamageWaiver = Math.floor(price * 0.01);
+                                form.setFieldsValue({
+                                    deposit: autoDeposit,
+                                    preDeposit: autoPreDeposit,
+                                    dailyDamageWaiver: autoDailyDamageWaiver,
+                                });
+                            }
+                        }
+
+                        // Nếu người dùng thay đổi tiền cọc thủ công thì cập nhật lại tiền cọc trước
                         if (changedValues.deposit) {
                             const deposit = parseFloat(changedValues.deposit);
                             if (!isNaN(deposit)) {
                                 form.setFieldsValue({
-                                    preDeposit: Math.floor(deposit * 0.5),
+                                    preDeposit: Math.floor(deposit * 0.1),
                                 });
                             }
                         }

@@ -1,39 +1,120 @@
 import React, { useEffect, useState } from 'react'
-import { Tabs, Select, Space, DatePicker, Button, message } from 'antd'
+import { Tabs, Select, Space, DatePicker, Button, message, Checkbox } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios';
 
 const containerStyle = {
     width: '1000px',
     backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '30px',
-    margin: '30px auto',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+    borderRadius: '20px',
+    padding: '40px',
+    margin: '20px auto',
+    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '30px',
+    gap: '40px',
+    border: '1px solid rgba(0, 0, 0, 0.05)',
 };
 
 const sectionTitleStyle = {
-    fontSize: '18px',
-    fontWeight: '600',
-    marginBottom: '10px',
+    fontSize: '20px',
+    fontWeight: '700',
+    marginBottom: '20px',
+    color: '#1a1a1a',
+    position: 'relative',
+    paddingLeft: '15px',
+    borderLeft: '4px solid #1890ff',
 };
 
 const rowStyle = {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '20px',
+    gap: '25px',
     flexWrap: 'wrap',
 };
 
 const inputGroupStyle = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '12px',
     width: '30%',
-    minWidth: '200px',
+    minWidth: '220px',
+    flex: 1,
+};
+
+const labelStyle = {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: '4px',
+};
+
+const selectStyle = {
+    width: '100%',
+    borderRadius: '8px',
+    border: '1px solid #d9d9d9',
+    transition: 'all 0.3s ease',
+};
+
+const datePickerStyle = {
+    width: '100%',
+    borderRadius: '8px',
+    border: '1px solid #d9d9d9',
+    transition: 'all 0.3s ease',
+};
+
+const buttonContainerStyle = {
+    textAlign: 'center',
+    marginTop: '30px',
+    padding: '30px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '15px',
+    border: '1px solid #e9ecef',
+};
+
+const descriptionStyle = {
+    textAlign: 'center',
+    fontSize: '16px',
+    marginBottom: '20px',
+    color: '#666',
+    lineHeight: '1.6',
+    padding: '0 20px',
+};
+
+const searchButtonStyle = {
+    height: '50px',
+    padding: '0 40px',
+    fontSize: '16px',
+    fontWeight: '600',
+    borderRadius: '25px',
+    background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+    border: 'none',
+    boxShadow: '0 4px 15px rgba(24, 144, 255, 0.3)',
+    transition: 'all 0.3s ease',
+};
+
+const pageTitleStyle = {
+    textAlign: 'center',
+    margin: '80px auto 30px auto',
+    color: 'white',
+    fontSize: '28px',
+    fontWeight: '700',
+    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    padding: '15px 25px',
+    borderRadius: '12px',
+    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
+    maxWidth: '600px',
+    position: 'relative',
+    zIndex: 10,
+};
+
+const sectionContainerStyle = {
+    backgroundColor: '#fafafa',
+    padding: '25px',
+    borderRadius: '15px',
+    border: '1px solid #f0f0f0',
+    transition: 'all 0.3s ease',
 };
 
 const SearchMotorbikeComponent = () => {
@@ -41,16 +122,26 @@ const SearchMotorbikeComponent = () => {
     const [endTime, setEndTime] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [startCity, setStartCity] = useState('');
-    const [endCity, setEndCity] = useState('');
-    const [cityOptions, setCityOptions] = useState([]);
+    const [startBranch, setStartBranch] = useState('');
+    const [endBranch, setEndBranch] = useState('');
+    const [branchOptions, setBranchOptions] = useState([]);
+
+    // Trip context states
+    const [purpose, setPurpose] = useState('');
+    const [distanceCategory, setDistanceCategory] = useState('');
+    const [numPeople, setNumPeople] = useState('');
+    const [terrain, setTerrain] = useState('');
+    const [luggage, setLuggage] = useState('');
+    const [preferredFeatures, setPreferredFeatures] = useState([]);
+
     const navigate = useNavigate();
 
-    const getAllCities = async () => {
+    const getAllBranches = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/v1/customer/city/get-all');
+            const res = await axios.get('http://localhost:8080/api/v1/customer/branch/get-all');
             if (res.data.success) {
-                setCityOptions(res.data.cities);
+                setBranchOptions(res.data.branches);
+                console.log(res.data.branches);
             }
             else {
                 message.error(res.data.message);
@@ -62,19 +153,39 @@ const SearchMotorbikeComponent = () => {
     }
 
     const handleSearch = () => {
-        console.log(startTime, endTime, startDate, endDate, startCity, endCity);
-        if (!startTime || !endTime || !startDate || !endDate || !startCity || !endCity) {
+        console.log(startTime, endTime, startDate, endDate, startBranch, endBranch, purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures);
+        if (!startTime || !endTime || !startDate || !endDate || !startBranch || !endBranch) {
             message.error('Vui lòng chọn đầy đủ thông tin');
             return;
         }
-        navigate('/search/motorbike', {
+        console.log('startDate', startDate);
+        console.log('endDate', endDate);
+        console.log('startTime', startTime);
+        console.log('endTime', endTime);
+        console.log('startBranch', startBranch);
+        console.log('endBranch', endBranch);
+        console.log('purpose', purpose);
+        console.log('distanceCategory', distanceCategory);
+        console.log('numPeople', numPeople);
+        console.log('terrain', terrain);
+        console.log('luggage', luggage);
+        console.log('preferredFeatures', preferredFeatures);
+        navigate('/booking/available-motorbike', {
             state: {
                 startTime,
                 endTime,
                 startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
                 endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
-                startCity,
-                endCity
+                startBranch,
+                endBranch,
+                tripContext: {
+                    purpose,
+                    distanceCategory,
+                    numPeople,
+                    terrain,
+                    luggage,
+                    preferredFeatures
+                }
             }
         });
     };
@@ -84,13 +195,19 @@ const SearchMotorbikeComponent = () => {
         setEndTime('');
         setStartDate('');
         setEndDate('');
-        setStartCity('');
-        setEndCity('');
+        setStartBranch('');
+        setEndBranch('');
+        setPurpose('');
+        setDistanceCategory('');
+        setNumPeople('');
+        setTerrain('');
+        setLuggage('');
+        setPreferredFeatures([]);
     }
 
     useEffect(() => {
         resetForm();
-        getAllCities();
+        getAllBranches();
     }, []);
 
     const startTimeOptions = [
@@ -141,58 +258,93 @@ const SearchMotorbikeComponent = () => {
         { value: '19:00', label: '19:00 PM' },
     ];
 
-    const startCityOptions = cityOptions.map((city) => ({
-        value: city._id,
-        label: city.city,
+    const startBranchOptions = branchOptions.map((branch) => ({
+        value: branch._id,
+        label: branch.city,
     }));
 
-    const endCityOptions = cityOptions.map((city) => ({
-        value: city._id,
-        label: city.city,
+    const endBranchOptions = branchOptions.map((branch) => ({
+        value: branch._id,
+        label: branch.city,
     }));
+
+    const purposeOptions = [
+        { value: 'leisure', label: 'Đi dạo' },
+        { value: 'tour', label: 'Du lịch' },
+        { value: 'work', label: 'Công việc' },
+        { value: 'delivery', label: 'Giao hàng' },
+        { value: 'other', label: 'Khác' },
+    ];
+
+    const distanceCategoryOptions = [
+        { value: 'short', label: 'Ngắn (< 50km)' },
+        { value: 'medium', label: 'Trung bình (50-200km)' },
+        { value: 'long', label: 'Dài (> 200km)' },
+    ];
+
+    const numPeopleOptions = [
+        { value: 1, label: '1 người' },
+        { value: 2, label: '2 người' },
+    ];
+
+    const terrainOptions = [
+        { value: 'mountain', label: 'Đường núi' },
+        { value: 'urban', label: 'Đô thị' },
+        { value: 'mixed', label: 'Hỗn hợp' },
+    ];
+
+    const luggageOptions = [
+        { value: 'heavy', label: 'Nhiều hành lý' },
+        { value: 'light', label: 'Ít hành lý' },
+    ];
+
+    const preferredFeaturesOptions = [
+        { value: 'fuel-saving', label: 'Tiết kiệm nhiên liệu' },
+        { value: 'easy-to-ride', label: 'Dễ lái' },
+    ];
 
     return (
-        <>
-            <h1 style={{ textAlign: 'center', margin: '30px 0', color: 'white' }}>Tìm kiếm xe máy</h1>
+        <div style={{ paddingTop: '500px' }}>
+            <h1 style={pageTitleStyle}>🏍️ Tìm kiếm xe máy</h1>
             <div style={containerStyle}>
                 <Tabs
                     defaultActiveKey="search"
                     items={[
                         {
                             key: "search",
-                            label: <Link to="#" style={{ textDecoration: 'none', color: 'black' }}>Tìm kiếm</Link>,
+                            label: <Link to="#" style={{ textDecoration: 'none', color: 'black', fontWeight: '600' }}>Tìm kiếm</Link>,
                         },
                         {
                             key: "pricing",
-                            label: <Link to="#" style={{ textDecoration: 'none', color: 'black' }}>Bảng giá</Link>,
+                            label: <Link to="#" style={{ textDecoration: 'none', color: 'black', fontWeight: '600' }}>Bảng giá</Link>,
                         },
                     ]}
                 />
 
                 {/* Bắt đầu */}
-                <div>
-                    <div style={sectionTitleStyle}>Bắt đầu</div>
+                <div style={sectionContainerStyle}>
+                    <div style={sectionTitleStyle}>📍 Bắt đầu</div>
                     <div style={rowStyle}>
                         <div style={inputGroupStyle}>
-                            <label>Thành phố bắt đầu</label>
+                            <label style={labelStyle}>Thành phố bắt đầu</label>
                             <Select
-                                value={startCity}
+                                value={startBranch}
                                 placeholder="Chọn thành phố"
-                                style={{ width: '100%' }}
-                                onChange={(value) => setStartCity(value)}
-                                options={startCityOptions}
+                                style={selectStyle}
+                                onChange={(value) => setStartBranch(value)}
+                                options={startBranchOptions}
                             />
                         </div>
                         <div style={inputGroupStyle}>
-                            <label>Ngày bắt đầu</label>
-                            <DatePicker style={{ width: '100%' }} onChange={(value) => setStartDate(value)} />
+                            <label style={labelStyle}>Ngày bắt đầu</label>
+                            <DatePicker style={datePickerStyle} onChange={(value) => setStartDate(value)} />
                         </div>
                         <div style={inputGroupStyle}>
-                            <label>Thời gian bắt đầu</label>
+                            <label style={labelStyle}>Thời gian bắt đầu</label>
                             <Select
                                 value={startTime}
                                 placeholder="Chọn thời gian"
-                                style={{ width: '100%' }}
+                                style={selectStyle}
                                 onChange={(value) => setStartTime(value)}
                                 options={startTimeOptions}
                             />
@@ -200,30 +352,30 @@ const SearchMotorbikeComponent = () => {
                     </div>
                 </div>
 
-                {/* Kết thúc */}
-                <div>
-                    <div style={sectionTitleStyle}>Kết thúc</div>
+                {/* Thông tin chuyến đi */}
+                <div style={sectionContainerStyle}>
+                    <div style={sectionTitleStyle}>🎯 Thông tin chuyến đi</div>
                     <div style={rowStyle}>
                         <div style={inputGroupStyle}>
-                            <label>Thành phố kết thúc</label>
+                            <label style={labelStyle}>Thành phố kết thúc</label>
                             <Select
-                                value={endCity}
+                                value={endBranch}
                                 placeholder="Chọn thành phố"
-                                style={{ width: '100%' }}
-                                onChange={(value) => setEndCity(value)}
-                                options={endCityOptions}
+                                style={selectStyle}
+                                onChange={(value) => setEndBranch(value)}
+                                options={endBranchOptions}
                             />
                         </div>
                         <div style={inputGroupStyle}>
-                            <label>Ngày kết thúc</label>
-                            <DatePicker style={{ width: '100%' }} onChange={(value) => setEndDate(value)} />
+                            <label style={labelStyle}>Ngày kết thúc</label>
+                            <DatePicker style={datePickerStyle} onChange={(value) => setEndDate(value)} />
                         </div>
                         <div style={inputGroupStyle}>
-                            <label>Thời gian kết thúc</label>
+                            <label style={labelStyle}>Thời gian kết thúc</label>
                             <Select
                                 value={endTime}
                                 placeholder="Chọn thời gian"
-                                style={{ width: '100%' }}
+                                style={selectStyle}
                                 onChange={(value) => setEndTime(value)}
                                 options={endTimeOptions}
                             />
@@ -231,20 +383,100 @@ const SearchMotorbikeComponent = () => {
                     </div>
                 </div>
 
+                {/* Thông tin chi tiết chuyến đi */}
+                <div style={sectionContainerStyle}>
+                    <div style={sectionTitleStyle}>⚙️ Thông tin chi tiết chuyến đi</div>
+                    <div style={rowStyle}>
+                        <div style={inputGroupStyle}>
+                            <label style={labelStyle}>Mục đích chuyến đi</label>
+                            <Select
+                                value={purpose}
+                                placeholder="Chọn mục đích"
+                                style={selectStyle}
+                                onChange={(value) => setPurpose(value)}
+                                options={purposeOptions}
+                            />
+                        </div>
+                        <div style={inputGroupStyle}>
+                            <label style={labelStyle}>Khoảng cách</label>
+                            <Select
+                                value={distanceCategory}
+                                placeholder="Chọn khoảng cách"
+                                style={selectStyle}
+                                onChange={(value) => setDistanceCategory(value)}
+                                options={distanceCategoryOptions}
+                            />
+                        </div>
+                        <div style={inputGroupStyle}>
+                            <label style={labelStyle}>Số người</label>
+                            <Select
+                                value={numPeople}
+                                placeholder="Chọn số người"
+                                style={selectStyle}
+                                onChange={(value) => setNumPeople(value)}
+                                options={numPeopleOptions}
+                            />
+                        </div>
+                    </div>
+                    <div style={rowStyle}>
+                        <div style={inputGroupStyle}>
+                            <label style={labelStyle}>Địa hình</label>
+                            <Select
+                                value={terrain}
+                                placeholder="Chọn địa hình"
+                                style={selectStyle}
+                                onChange={(value) => setTerrain(value)}
+                                options={terrainOptions}
+                            />
+                        </div>
+                        <div style={inputGroupStyle}>
+                            <label style={labelStyle}>Hành lý</label>
+                            <Select
+                                value={luggage}
+                                placeholder="Chọn loại hành lý"
+                                style={selectStyle}
+                                onChange={(value) => setLuggage(value)}
+                                options={luggageOptions}
+                            />
+                        </div>
+                        <div style={inputGroupStyle}>
+                            <label style={labelStyle}>Tính năng ưa thích</label>
+                            <Select
+                                mode="multiple"
+                                value={preferredFeatures}
+                                placeholder="Chọn tính năng"
+                                style={selectStyle}
+                                onChange={(value) => setPreferredFeatures(value)}
+                                options={preferredFeaturesOptions}
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 {/* Nút tìm kiếm */}
-                <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                    <p style={{ textAlign: 'center', fontSize: '16px', marginBottom: '10px' }}>
-                        🔍 Vui lòng chọn địa điểm và thời gian nhận/trả xe để tìm kiếm các xe phù hợp.
+                <div style={buttonContainerStyle}>
+                    <p style={descriptionStyle}>
+                        🔍 Vui lòng chọn địa điểm, thời gian và thông tin chuyến đi để tìm kiếm các xe phù hợp với nhu cầu của bạn.
                     </p>
                     <Button
                         type="primary"
                         size="large"
                         onClick={handleSearch}
-
-                    >Tìm xe</Button>
+                        style={searchButtonStyle}
+                        onMouseEnter={(e) => {
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = '0 6px 20px rgba(24, 144, 255, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = '0 4px 15px rgba(24, 144, 255, 0.3)';
+                        }}
+                    >
+                        🚀 Tìm xe ngay
+                    </Button>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

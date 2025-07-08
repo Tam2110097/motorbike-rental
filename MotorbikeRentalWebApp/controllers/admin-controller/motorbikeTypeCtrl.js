@@ -16,7 +16,9 @@ const createMotorbikeType = async (req, res) => {
 // Get All Motorbike Types
 const getAllMotorbikeTypes = async (req, res) => {
     try {
-        const types = await motorbikeTypeModel.find().populate('pricingRule');
+        const types = await motorbikeTypeModel.find()
+            .populate('pricingRule')
+            .populate('specifications');
         res.status(200).json({ success: true, motorbikeTypes: types });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -26,13 +28,18 @@ const getAllMotorbikeTypes = async (req, res) => {
 // Get Motorbike Type By ID
 const getMotorbikeTypeById = async (req, res) => {
     try {
-        const type = await motorbikeTypeModel.findById(req.params.id).populate('pricingRule');
+        const type = await motorbikeTypeModel
+            .findById(req.params.id)
+            .populate('pricingRule')
+            .populate('specifications');
+
         if (!type) return res.status(404).json({ success: false, message: 'Motorbike type not found' });
+
         res.status(200).json({ success: true, motorbikeType: type });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
-};
+}
 
 // Update Motorbike Type
 const updateMotorbikeType = async (req, res) => {
@@ -78,5 +85,5 @@ module.exports = {
     getMotorbikeTypeById,
     updateMotorbikeType,
     deleteMotorbikeType,
-    getMotorbikeTypesWithoutSpec
+    getMotorbikeTypesWithoutSpec,
 }; 
