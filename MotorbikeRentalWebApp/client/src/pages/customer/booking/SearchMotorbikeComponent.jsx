@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Tabs, Select, Space, DatePicker, Button, message, Checkbox } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios';
+import { useBooking } from '../../../context/BookingContext'
 
 const containerStyle = {
     width: '1000px',
@@ -118,6 +119,7 @@ const sectionContainerStyle = {
 };
 
 const SearchMotorbikeComponent = () => {
+    const { setBookingData } = useBooking();
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
     const [startDate, setStartDate] = useState('');
@@ -158,57 +160,65 @@ const SearchMotorbikeComponent = () => {
             message.error('Vui lòng chọn đầy đủ thông tin');
             return;
         }
-        console.log('startDate', startDate);
-        console.log('endDate', endDate);
-        console.log('startTime', startTime);
-        console.log('endTime', endTime);
-        console.log('startBranch', startBranch);
-        console.log('endBranch', endBranch);
-        console.log('purpose', purpose);
-        console.log('distanceCategory', distanceCategory);
-        console.log('numPeople', numPeople);
-        console.log('terrain', terrain);
-        console.log('luggage', luggage);
-        console.log('preferredFeatures', preferredFeatures);
-        navigate('/booking/available-motorbike', {
-            state: {
-                startTime,
-                endTime,
-                startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
-                endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
-                startBranch,
-                endBranch,
-                tripContext: {
-                    purpose,
-                    distanceCategory,
-                    numPeople,
-                    terrain,
-                    luggage,
-                    preferredFeatures
-                }
-            }
+        if (endDate.isBefore(startDate)) {
+            return message.error('Ngày kết thúc không được trước ngày bắt đầu');
+        }
+        // console.log('startDate', startDate);
+        // console.log('endDate', endDate);
+        // console.log('startTime', startTime);
+        // console.log('endTime', endTime);
+        // console.log('startBranch', startBranch);
+        // console.log('endBranch', endBranch);
+        // console.log('purpose', purpose);
+        // console.log('distanceCategory', distanceCategory);
+        // console.log('numPeople', numPeople);
+        // console.log('terrain', terrain);
+        // console.log('luggage', luggage);
+        // console.log('preferredFeatures', preferredFeatures);
+        setBookingData({
+            startTime,
+            endTime,
+            startDate: startDate.format('YYYY-MM-DD'),
+            endDate: endDate.format('YYYY-MM-DD'),
+            startBranch,
+            endBranch,
+            tripContext: {
+                purpose,
+                distanceCategory,
+                numPeople,
+                terrain,
+                luggage,
+                preferredFeatures,
+            },
+            motorbikes: [],
+        });
+        navigate('/booking/available-motorbike');
+    };
+
+    useEffect(() => {
+        if (branchOptions.length === 0) {
+            getAllBranches();
+        }
+    }, []);
+
+    const getValidEndTimeOptions = () => {
+        if (!startDate || !endDate || !startTime) return endTimeOptions;
+
+        const isSameDay = startDate.isSame(endDate, 'day');
+        if (!isSameDay) return endTimeOptions;
+
+        const startTotalMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+
+        return endTimeOptions.map(({ value, label }) => {
+            const endTotalMinutes = parseInt(value.split(':')[0]) * 60 + parseInt(value.split(':')[1]);
+            return {
+                value,
+                label,
+                disabled: (endTotalMinutes - startTotalMinutes) < 120, // 2 tiếng = 120 phút
+            };
         });
     };
 
-    const resetForm = () => {
-        setStartTime('');
-        setEndTime('');
-        setStartDate('');
-        setEndDate('');
-        setStartBranch('');
-        setEndBranch('');
-        setPurpose('');
-        setDistanceCategory('');
-        setNumPeople('');
-        setTerrain('');
-        setLuggage('');
-        setPreferredFeatures([]);
-    }
-
-    useEffect(() => {
-        resetForm();
-        getAllBranches();
-    }, []);
 
     const startTimeOptions = [
         { value: '08:00', label: '08:00 AM' },
@@ -354,7 +364,7 @@ const SearchMotorbikeComponent = () => {
 
                 {/* Thông tin chuyến đi */}
                 <div style={sectionContainerStyle}>
-                    <div style={sectionTitleStyle}>🎯 Thông tin chuyến đi</div>
+                    <div style={sectionTitleStyle}>🎯 Kết thúc</div>
                     <div style={rowStyle}>
                         <div style={inputGroupStyle}>
                             <label style={labelStyle}>Thành phố kết thúc</label>
@@ -377,7 +387,7 @@ const SearchMotorbikeComponent = () => {
                                 placeholder="Chọn thời gian"
                                 style={selectStyle}
                                 onChange={(value) => setEndTime(value)}
-                                options={endTimeOptions}
+                                options={getValidEndTimeOptions()}
                             />
                         </div>
                     </div>

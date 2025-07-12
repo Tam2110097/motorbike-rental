@@ -5,7 +5,6 @@ import HeaderBar from '../components/HeaderBar';
 import Banner from '../components/Banner';
 const { Header, Content, Sider } = Layout;
 import SearchMotorbikeComponent from './customer/booking/SearchMotorbikeComponent';
-import SearchTool from '../components/SearchTool';
 
 const HomePage = () => {
     // const {

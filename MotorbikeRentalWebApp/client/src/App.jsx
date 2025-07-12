@@ -41,6 +41,8 @@ import UpdateMotorbikePage from './pages/employee/motorbike/UpdateMotorbikePage'
 import DeleteMotorbikePage from './pages/employee/motorbike/DeleteMotorbikePage'
 import AvailableMotorbikePage from './pages/customer/booking/AvailableMotorbikePage'
 import MotorbikeDetailPage from './pages/customer/booking/MotorbikeDetailPage'
+import { BookingProvider } from './context/BookingContext'
+import ConfirmBikeModel from './pages/customer/booking/ConfirmBikeModel'
 
 function App() {
 
@@ -48,7 +50,13 @@ function App() {
     <>
       <BrowserRouter>
         <Routes>
-          <Route path='/' element={<HomePage />} />
+          <Route
+            path='/'
+            element={
+              <BookingProvider>
+                <HomePage />
+              </BookingProvider>
+            } />
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
           {/* ====admin==== */}
@@ -93,8 +101,21 @@ function App() {
           <Route path='/employee/motorbike/update/:id' element={<UpdateMotorbikePage />} />
           <Route path='/employee/motorbike/delete/:id' element={<DeleteMotorbikePage />} />
           {/* ====customer==== */}
-          <Route path='/booking/available-motorbike' element={<AvailableMotorbikePage />} />
+          <Route
+            path='/booking/available-motorbike'
+            element={
+              <BookingProvider>
+                <AvailableMotorbikePage />
+              </BookingProvider>
+            } />
           <Route path='/motorbike-detail/:id' element={<MotorbikeDetailPage />} />
+          <Route
+            path='/booking/confirm-bike-model'
+            element={
+              <BookingProvider>
+                <ConfirmBikeModel />
+              </BookingProvider>
+            } />
         </Routes>
       </BrowserRouter>
     </>

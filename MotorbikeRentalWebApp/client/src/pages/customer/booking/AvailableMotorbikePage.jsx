@@ -3,8 +3,8 @@ import HeaderBar from '../../../components/HeaderBar'
 import { Layout, Card, Row, Col, Typography, Spin, Empty, Tag, Button, Space, Image, Divider, message } from 'antd'
 import { CarOutlined, DollarOutlined, SafetyOutlined, ClockCircleOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import axios from 'axios'
-import { useLocation, useNavigate, Link } from 'react-router-dom'
-
+import { useNavigate, Link } from 'react-router-dom'
+import { useBooking } from '../../../context/BookingContext'
 const { Title, Text, Paragraph } = Typography
 const { Content } = Layout
 
@@ -25,15 +25,12 @@ const pageTitleStyle = {
 };
 
 const AvailableMotorbikePage = () => {
+    const { bookingData, setBookingData } = useBooking();
     const [motorbikeTypes, setMotorbikeTypes] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [branchName, setBranchName] = useState(null)
-    const location = useLocation()
     const navigate = useNavigate()
-
-    // Get branchId from location state, or use null for all branches
-    const { startBranch, endBranch } = location.state || {}
 
     // Fetch branch info if branchId is present
     const fetchBranchName = async (id) => {
@@ -54,12 +51,11 @@ const AvailableMotorbikePage = () => {
             setLoading(true)
             setError(null)
 
-            let url = '';
-            if (startBranch) {
-                url = `http://localhost:8080/api/v1/customer/motorbike-type/available-at-branch/${startBranch}`;
-                fetchBranchName(startBranch);
+            let url = 'http://localhost:8080/api/v1/customer/motorbike-type/available';
+            if (bookingData.startBranch) {
+                url += `?branchId=${bookingData.startBranch}`;
+                fetchBranchName(bookingData.startBranch);
             } else {
-                url = 'http://localhost:8080/api/v1/customer/motorbike-type/available';
                 setBranchName(null);
             }
 
@@ -81,17 +77,28 @@ const AvailableMotorbikePage = () => {
 
     useEffect(() => {
         getAvailableMotorbikeTypes()
+        console.log('>>>>>>>>>>>>>>>>>>>', bookingData)
         // eslint-disable-next-line
-    }, [startBranch])
+    }, [bookingData.startBranch])
 
     const handleSelectMotorbikeType = (motorbikeType) => {
-        navigate('/booking/select-motorbike', {
-            state: {
-                motorbikeType,
-                startBranch,
-            }
-        })
+        const alreadyExists = (bookingData.motorbikeTypes || []).some(
+            (item) => item._id === motorbikeType._id
+        );
+
+        if (alreadyExists) {
+            message.info('Loại xe này đã được chọn');
+            return;
+        }
+
+        setBookingData(prev => ({
+            ...prev,
+            motorbikeTypes: [...(prev.motorbikeTypes || []), motorbikeType],
+            motorbikes: [...(prev.motorbikes || []), { motorbikeType, quantity: 1 }]
+        }));
+        navigate('/booking/confirm-bike-model');
     }
+
 
     const formatPrice = (price) => {
         return new Intl.NumberFormat('vi-VN', {
@@ -180,14 +187,23 @@ const AvailableMotorbikePage = () => {
                             />
                         </Card>
                     ) : (
-                        <Row gutter={[16, 16]}>
+                        <Row gutter={[16, 16]} style={{ display: 'flex', flexWrap: 'wrap' }}>
                             {motorbikeTypes.map((motorbikeType) => (
-                                <Col xs={24} sm={12} lg={8} xl={6} key={motorbikeType._id}>
+                                <Col xs={24} sm={12} lg={8} xl={6} key={motorbikeType._id} style={{ display: 'flex' }}>
                                     <Card
                                         hoverable
-                                        style={{ height: '100%' }}
+                                        style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
                                         cover={
-                                            <div style={{ height: 250, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
+                                            <div style={{
+                                                height: 250,
+                                                width: '100%',
+                                                position: 'relative',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                background: '#fff',
+                                                overflow: 'hidden'
+                                            }}>
                                                 <Image
                                                     alt={motorbikeType.name}
                                                     src={`http://localhost:8080${motorbikeType.image}`}
@@ -196,7 +212,9 @@ const AvailableMotorbikePage = () => {
                                                         height: '100%',
                                                         objectFit: 'contain',
                                                         background: '#fff',
-                                                        display: 'block'
+                                                        display: 'block',
+                                                        maxWidth: '100%',
+                                                        maxHeight: '100%'
                                                     }}
                                                     fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
                                                 />
@@ -232,7 +250,7 @@ const AvailableMotorbikePage = () => {
                                                         {motorbikeType.name}
                                                     </Title>
                                                     <Tag color="blue" style={{ marginTop: 4 }}>
-                                                        {motorbikeType.availableCount} xe có sẵn
+                                                        {motorbikeType.availableCount} xe có sẵn{bookingData.startBranch ? ' tại chi nhánh' : ' toàn hệ thống'}
                                                     </Tag>
                                                 </div>
                                             }
@@ -249,7 +267,7 @@ const AvailableMotorbikePage = () => {
 
                                                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
                                                         {/* Nếu cùng chi nhánh, chỉ hiển thị giá cùng chi nhánh */}
-                                                        {startBranch === endBranch && (
+                                                        {bookingData.startBranch === bookingData.endBranch && (
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                 <Text>
                                                                     <DollarOutlined style={{ marginRight: 4, color: '#1890ff' }} />
@@ -264,7 +282,7 @@ const AvailableMotorbikePage = () => {
                                                         )}
 
                                                         {/* Nếu khác chi nhánh, chỉ hiển thị giá khác chi nhánh */}
-                                                        {startBranch !== endBranch && (
+                                                        {bookingData.startBranch !== bookingData.endBranch && (
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                 <Text>
                                                                     <DollarOutlined style={{ marginRight: 4, color: '#fa541c' }} />

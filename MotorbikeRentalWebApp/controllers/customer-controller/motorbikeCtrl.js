@@ -280,22 +280,175 @@ const getAvailableMotorbikes = async (req, res) => {
 };
 
 // Get available motorbike types at branch controller
-const getAvailableMotorbikeTypesAtBranch = async (req, res) => {
-    try {
-        const { branchId } = req.params;
+// const getAvailableMotorbikeTypesAtBranch = async (req, res) => {
+//     try {
+//         const { branchId } = req.params;
 
-        // Convert branchId to ObjectId if it's a string
-        const mongoose = require('mongoose');
-        const objectIdBranchId = mongoose.Types.ObjectId.isValid(branchId)
-            ? new mongoose.Types.ObjectId(branchId)
-            : branchId;
+//         // Convert branchId to ObjectId if it's a string
+//         const mongoose = require('mongoose');
+//         const objectIdBranchId = mongoose.Types.ObjectId.isValid(branchId)
+//             ? new mongoose.Types.ObjectId(branchId)
+//             : branchId;
+
+//         const motorbikeTypes = await motorbikeModel.aggregate([
+//             {
+//                 $match: {
+//                     branchId: objectIdBranchId,
+//                     status: 'available'
+//                 }
+//             },
+//             {
+//                 $group: {
+//                     _id: '$motorbikeType',
+//                     availableCount: { $sum: 1 }
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: 'motorbiketypes',
+//                     localField: '_id',
+//                     foreignField: '_id',
+//                     as: 'motorbikeType'
+//                 }
+//             },
+//             {
+//                 $unwind: '$motorbikeType'
+//             },
+//             {
+//                 $addFields: {
+//                     'motorbikeType.availableCount': '$availableCount'
+//                 }
+//             },
+//             {
+//                 $replaceRoot: { newRoot: '$motorbikeType' }
+//             },
+//             {
+//                 $lookup: {
+//                     from: 'pricingrules',
+//                     localField: 'pricingRule',
+//                     foreignField: '_id',
+//                     as: 'pricingRule'
+//                 }
+//             },
+//             {
+//                 $unwind: {
+//                     path: '$pricingRule',
+//                     preserveNullAndEmptyArrays: true
+//                 }
+//             },
+//             {
+//                 $match: {
+//                     'isActive': true
+//                 }
+//             }
+//         ]);
+
+//         res.status(200).json({
+//             success: true,
+//             message: 'Lấy danh sách loại xe khả dụng thành công',
+//             motorbikeTypes
+//         });
+
+//     } catch (error) {
+//         console.error('Error getting available motorbike types:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Lỗi khi lấy loại xe khả dụng',
+//             error: error.message
+//         });
+//     }
+// };
+
+// // Get all available motorbike types controller
+// const getAllAvailableMotorbikeTypes = async (req, res) => {
+//     try {
+//         const motorbikeTypes = await motorbikeModel.aggregate([
+//             {
+//                 $match: {
+//                     status: 'available'
+//                 }
+//             },
+//             {
+//                 $group: {
+//                     _id: '$motorbikeType',
+//                     availableCount: { $sum: 1 }
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: 'motorbiketypes',
+//                     localField: '_id',
+//                     foreignField: '_id',
+//                     as: 'motorbikeType'
+//                 }
+//             },
+//             {
+//                 $unwind: '$motorbikeType'
+//             },
+//             {
+//                 $addFields: {
+//                     'motorbikeType.availableCount': '$availableCount'
+//                 }
+//             },
+//             {
+//                 $replaceRoot: { newRoot: '$motorbikeType' }
+//             },
+//             {
+//                 $lookup: {
+//                     from: 'pricingRules',
+//                     localField: 'pricingRule',
+//                     foreignField: '_id',
+//                     as: 'pricingRule'
+//                 }
+//             },
+//             {
+//                 $unwind: {
+//                     path: '$pricingRule',
+//                     preserveNullAndEmptyArrays: true
+//                 }
+//             },
+//             {
+//                 $match: {
+//                     'isActive': true
+//                 }
+//             },
+//             {
+//                 $sort: { name: 1 }
+//             }
+//         ]);
+
+//         res.status(200).json({
+//             success: true,
+//             message: 'Lấy danh sách tất cả loại xe khả dụng thành công',
+//             motorbikeTypes
+//         });
+
+//     } catch (error) {
+//         console.error('Error getting all available motorbike types:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Lỗi khi lấy danh sách loại xe khả dụng',
+//             error: error.message
+//         });
+//     }
+// };
+// GET /api/v1/customer/motorbike-type/available
+const getAvailableMotorbikeTypes = async (req, res) => {
+    try {
+        const { branchId } = req.query; // branchId truyền qua query
+
+        const matchStage = {
+            status: 'available'
+        };
+
+        if (branchId) {
+            const mongoose = require('mongoose');
+            matchStage.branchId = new mongoose.Types.ObjectId(branchId);
+        }
 
         const motorbikeTypes = await motorbikeModel.aggregate([
             {
-                $match: {
-                    branchId: objectIdBranchId,
-                    status: 'available'
-                }
+                $match: matchStage
             },
             {
                 $group: {
@@ -311,9 +464,7 @@ const getAvailableMotorbikeTypesAtBranch = async (req, res) => {
                     as: 'motorbikeType'
                 }
             },
-            {
-                $unwind: '$motorbikeType'
-            },
+            { $unwind: '$motorbikeType' },
             {
                 $addFields: {
                     'motorbikeType.availableCount': '$availableCount'
@@ -338,8 +489,11 @@ const getAvailableMotorbikeTypesAtBranch = async (req, res) => {
             },
             {
                 $match: {
-                    'isActive': true
+                    isActive: true
                 }
+            },
+            {
+                $sort: { name: 1 }
             }
         ]);
 
@@ -348,7 +502,6 @@ const getAvailableMotorbikeTypesAtBranch = async (req, res) => {
             message: 'Lấy danh sách loại xe khả dụng thành công',
             motorbikeTypes
         });
-
     } catch (error) {
         console.error('Error getting available motorbike types:', error);
         res.status(500).json({
@@ -359,79 +512,6 @@ const getAvailableMotorbikeTypesAtBranch = async (req, res) => {
     }
 };
 
-// Get all available motorbike types controller
-const getAllAvailableMotorbikeTypes = async (req, res) => {
-    try {
-        const motorbikeTypes = await motorbikeModel.aggregate([
-            {
-                $match: {
-                    status: 'available'
-                }
-            },
-            {
-                $group: {
-                    _id: '$motorbikeType',
-                    availableCount: { $sum: 1 }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'motorbiketypes',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'motorbikeType'
-                }
-            },
-            {
-                $unwind: '$motorbikeType'
-            },
-            {
-                $addFields: {
-                    'motorbikeType.availableCount': '$availableCount'
-                }
-            },
-            {
-                $replaceRoot: { newRoot: '$motorbikeType' }
-            },
-            {
-                $lookup: {
-                    from: 'pricingRules',
-                    localField: 'pricingRule',
-                    foreignField: '_id',
-                    as: 'pricingRule'
-                }
-            },
-            {
-                $unwind: {
-                    path: '$pricingRule',
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $match: {
-                    'isActive': true
-                }
-            },
-            {
-                $sort: { name: 1 }
-            }
-        ]);
-
-        res.status(200).json({
-            success: true,
-            message: 'Lấy danh sách tất cả loại xe khả dụng thành công',
-            motorbikeTypes
-        });
-
-    } catch (error) {
-        console.error('Error getting all available motorbike types:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi khi lấy danh sách loại xe khả dụng',
-            error: error.message
-        });
-    }
-};
 
 module.exports = {
     createMotorbike,
@@ -441,6 +521,7 @@ module.exports = {
     deleteMotorbike,
     getMotorbikesByType,
     getAvailableMotorbikes,
-    getAvailableMotorbikeTypesAtBranch,
-    getAllAvailableMotorbikeTypes
+    // getAvailableMotorbikeTypesAtBranch,
+    // getAllAvailableMotorbikeTypes
+    getAvailableMotorbikeTypes
 }; 

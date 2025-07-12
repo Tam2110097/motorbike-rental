@@ -7,15 +7,18 @@ const createAccessory = async (req, res) => {
         const { name, price, quantity, image, description } = req.body;
 
         // Validate required fields
-        if (!name || !price || !quantity || !image) {
+        if (name === undefined || name === null || name === '' ||
+            price === undefined || price === null ||
+            quantity === undefined || quantity === null ||
+            image === undefined || image === null || image === '') {
             return res.status(400).json({
                 success: false,
                 message: 'Tất cả các trường là bắt buộc',
                 missingFields: {
-                    name: !name,
-                    price: !price,
-                    quantity: !quantity,
-                    image: !image
+                    name: !name?.trim(),
+                    price: price === undefined || price === null,
+                    quantity: quantity === undefined || quantity === null,
+                    image: !image?.trim()
                 }
             });
         }
