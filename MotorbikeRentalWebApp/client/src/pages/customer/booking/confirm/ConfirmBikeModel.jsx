@@ -1,10 +1,10 @@
 import React from 'react'
-import HeaderBar from '../../../components/HeaderBar'
+import HeaderBar from '../../../../components/HeaderBar'
 import { Layout } from 'antd'
-import TripInformation from './components/TripInformation'
+import TripInformation from '../common/TripInformation'
 import OrderMotorbikeDetail from './components/OrderMotorbikeDetail'
 import Accessory from './components/Accessory'
-import ContinueButton from './components/ContinueButton'
+import ContinueButton from '../common/ContinueButton'
 // import { useBooking } from '../../../context/BookingContext'
 import Prices from './components/Prices'
 
@@ -54,7 +54,7 @@ const ConfirmBikeModel = () => {
                         <Accessory />
                         <Prices />
                         <div style={{ marginTop: 16 }}>
-                            <ContinueButton />
+                            <ContinueButton path='/booking/order-review' />
                         </div>
                     </div>
                 </div>

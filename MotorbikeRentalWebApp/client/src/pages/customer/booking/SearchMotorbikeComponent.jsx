@@ -3,6 +3,7 @@ import { Tabs, Select, Space, DatePicker, Button, message, Checkbox } from 'antd
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios';
 import { useBooking } from '../../../context/BookingContext'
+import dayjs from 'dayjs'
 
 const containerStyle = {
     width: '1000px',
@@ -136,6 +137,9 @@ const SearchMotorbikeComponent = () => {
     const [luggage, setLuggage] = useState('');
     const [preferredFeatures, setPreferredFeatures] = useState([]);
 
+    const [minEndDate, setMinEndDate] = useState(null);
+
+
     const navigate = useNavigate();
 
     const getAllBranches = async () => {
@@ -154,27 +158,48 @@ const SearchMotorbikeComponent = () => {
         }
     }
 
+    // Bảng khoảng cách giữa các chi nhánh (theo km)
+    const distanceMatrix = {
+        "Hồ Chí Minh": { "Hồ Chí Minh": 0, "Cần Thơ": 170, "Đà Lạt": 300, "Hà Nội": 1600, "Đà Nẵng": 960 },
+        "Cần Thơ": { "Hồ Chí Minh": 170, "Cần Thơ": 0, "Đà Lạt": 470, "Hà Nội": 1780, "Đà Nẵng": 1130 },
+        "Đà Lạt": { "Hồ Chí Minh": 300, "Cần Thơ": 470, "Đà Lạt": 0, "Hà Nội": 1430, "Đà Nẵng": 780 },
+        "Hà Nội": { "Hồ Chí Minh": 1600, "Cần Thơ": 1780, "Đà Lạt": 1430, "Hà Nội": 0, "Đà Nẵng": 770 },
+        "Đà Nẵng": { "Hồ Chí Minh": 960, "Cần Thơ": 1130, "Đà Lạt": 780, "Hà Nội": 770, "Đà Nẵng": 0 },
+    };
+
+    // Tính số ngày thuê tối thiểu dựa vào khoảng cách
+    const getMinRentalDays = (fromCity, toCity) => {
+        const distance = distanceMatrix[fromCity]?.[toCity] || 0;
+        if (distance <= 50) return 1;
+        if (distance <= 300) return 2;
+        if (distance <= 600) return 3;
+        if (distance <= 1000) return 4;
+        return 5;
+    };
+
     const handleSearch = () => {
-        console.log(startTime, endTime, startDate, endDate, startBranch, endBranch, purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures);
         if (!startTime || !endTime || !startDate || !endDate || !startBranch || !endBranch) {
             message.error('Vui lòng chọn đầy đủ thông tin');
             return;
         }
-        if (endDate.isBefore(startDate)) {
-            return message.error('Ngày kết thúc không được trước ngày bắt đầu');
+
+        const fromCity = branchOptions.find(b => b._id === startBranch)?.city;
+        const toCity = branchOptions.find(b => b._id === endBranch)?.city;
+
+        if (fromCity && toCity) {
+            const minDays = getMinRentalDays(fromCity, toCity);
+            const days = endDate.diff(startDate, 'day');
+
+            if (fromCity !== toCity && days < minDays) {
+                return message.warning(`Bạn cần thuê ít nhất ${minDays} ngày khi di chuyển từ ${fromCity} đến ${toCity}`);
+            }
+
+            if (fromCity === toCity && endDate.isBefore(startDate)) {
+                return message.warning('Ngày kết thúc không được trước ngày bắt đầu');
+            }
         }
-        // console.log('startDate', startDate);
-        // console.log('endDate', endDate);
-        // console.log('startTime', startTime);
-        // console.log('endTime', endTime);
-        // console.log('startBranch', startBranch);
-        // console.log('endBranch', endBranch);
-        // console.log('purpose', purpose);
-        // console.log('distanceCategory', distanceCategory);
-        // console.log('numPeople', numPeople);
-        // console.log('terrain', terrain);
-        // console.log('luggage', luggage);
-        // console.log('preferredFeatures', preferredFeatures);
+
+        // Tiếp tục nếu hợp lệ
         setBookingData({
             startTime,
             endTime,
@@ -195,11 +220,23 @@ const SearchMotorbikeComponent = () => {
         navigate('/booking/available-motorbike');
     };
 
+
     useEffect(() => {
         if (branchOptions.length === 0) {
             getAllBranches();
         }
-    }, []);
+
+        if (!startDate || !startBranch || !endBranch) return;
+
+        const fromCity = branchOptions.find(b => b._id === startBranch)?.city;
+        const toCity = branchOptions.find(b => b._id === endBranch)?.city;
+
+        if (fromCity && toCity) {
+            const minDays = getMinRentalDays(fromCity, toCity);
+            const minEnd = startDate.clone().add(minDays, 'day');
+            setMinEndDate(minEnd);
+        }
+    }, [startDate, startBranch, endBranch, branchOptions]);
 
     const getValidEndTimeOptions = () => {
         if (!startDate || !endDate || !startTime) return endTimeOptions;
@@ -347,7 +384,15 @@ const SearchMotorbikeComponent = () => {
                         </div>
                         <div style={inputGroupStyle}>
                             <label style={labelStyle}>Ngày bắt đầu</label>
-                            <DatePicker style={datePickerStyle} onChange={(value) => setStartDate(value)} />
+                            {/* <DatePicker style={datePickerStyle} onChange={(value) => setStartDate(value)} /> */}
+                            <DatePicker
+                                style={datePickerStyle}
+                                onChange={(value) => setStartDate(value)}
+                                disabledDate={(current) =>
+                                    current && current < dayjs().add(1, 'day').startOf('day')
+                                }
+                            />
+
                         </div>
                         <div style={inputGroupStyle}>
                             <label style={labelStyle}>Thời gian bắt đầu</label>
@@ -378,7 +423,32 @@ const SearchMotorbikeComponent = () => {
                         </div>
                         <div style={inputGroupStyle}>
                             <label style={labelStyle}>Ngày kết thúc</label>
-                            <DatePicker style={datePickerStyle} onChange={(value) => setEndDate(value)} />
+                            {/* <DatePicker style={datePickerStyle} onChange={(value) => setEndDate(value)} /> */}
+                            <DatePicker
+                                style={datePickerStyle}
+                                onChange={(value) => setEndDate(value)}
+                                disabledDate={(current) => {
+                                    if (!startDate || !startBranch || !endBranch) return true;
+
+                                    const fromCity = branchOptions.find(b => b._id === startBranch)?.city;
+                                    const toCity = branchOptions.find(b => b._id === endBranch)?.city;
+
+                                    if (!fromCity || !toCity) return true;
+
+                                    const isSameCity = fromCity === toCity;
+
+                                    if (isSameCity) {
+                                        // Cho phép chọn cùng ngày nếu cùng chi nhánh
+                                        return current && current < startDate.startOf('day');
+                                    } else {
+                                        // Khác chi nhánh → phải >= minEndDate (ví dụ startDate + 2 ngày)
+                                        return current && current < minEndDate?.startOf('day');
+                                    }
+                                }}
+
+
+                            />
+
                         </div>
                         <div style={inputGroupStyle}>
                             <label style={labelStyle}>Thời gian kết thúc</label>

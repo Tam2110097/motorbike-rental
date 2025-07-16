@@ -20,6 +20,11 @@ const rentalOrderMotorbikeDetailSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'motorbikeTypes',
         required: [true, 'motorbikeTypeId is required']
+    },
+    damageWaiverFee: {
+        type: Number,
+        required: [false, 'damageWaiverFee is required'],
+        min: [0, 'damageWaiverFee cannot be negative']
     }
 }, {
     timestamps: true

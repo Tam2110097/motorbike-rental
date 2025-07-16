@@ -11,9 +11,10 @@ export const BookingProvider = ({ children }) => {
             return {
                 ...parsed,
                 motorbikes: parsed.motorbikes || [],
+                motorbikeTypes: parsed.motorbikeTypes || []
             };
         }
-        return { motorbikes: [] };
+        return { motorbikes: [], motorbikeTypes: [] };
     });
 
     useEffect(() => {

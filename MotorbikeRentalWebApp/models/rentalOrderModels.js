@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const rentalOrderSchema = new mongoose.Schema({
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'customers',
+        ref: 'users',
         required: [true, 'customerId is required']
     },
     branchReceive: {
@@ -29,29 +29,43 @@ const rentalOrderSchema = new mongoose.Schema({
         enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled'],
         default: 'pending'
     },
-    evidenceImage: {
-        type: String,
-        required: [true, 'evidenceImage is required']
-    },
+    // evidenceImage: {
+    //     type: String,
+    //     required: [true, 'evidenceImage is required']
+    // },
     orderCode: {
         type: String,
         unique: true,
         trim: true
-    },
-    hasDamageWaiver: {
-        type: Boolean,
-        default: false
     },
     grandTotal: {
         type: Number,
         required: [true, 'grandTotal is required'],
         min: [0, 'grandTotal cannot be negative']
     },
-    motorbikes: {
-        type: [mongoose.Schema.Types.ObjectId],
-        ref: 'motorbikes',
-        required: [true, 'motorbikes is required']
-    },
+    motorbikes: [{
+        motorbikeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'motorbikes',
+            required: true
+        },
+        motorbikeTypeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'motorbikeTypes',
+            required: true
+        },
+        quantity: {
+            type: Number,
+            required: true,
+            min: 1
+        },
+        hasDamageWaiver: {
+            type: Boolean,
+            default: false
+        },
+        pricePerDay: Number,
+        discountedPricePerDay: Number
+    }],
     createdAt: {
         type: Date,
         default: Date.now

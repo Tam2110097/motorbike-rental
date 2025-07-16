@@ -2,180 +2,235 @@ const rentalOrderModel = require('../../models/rentalOrderModels');
 const rentalOrderMotorbikeDetailModel = require('../../models/rentalOrderMotorbikeDetailModels');
 const motorbikeModel = require('../../models/motorbikeModels');
 const motorbikeTypeModel = require('../../models/motorbikeTypeModels');
-const customerModel = require('../../models/customerModels');
+const userModel = require('../../models/userModels');
 const branchModel = require('../../models/branchModels');
+const accessoryDetailModel = require('../../models/accessoryDetailModels');
+const accessoryModel = require('../../models/accessoryModels');
+const tripContextModel = require('../../models/tripContextModels');
+const mongoose = require('mongoose');
 
 // Create rental order controller
 const createRentalOrder = async (req, res) => {
     try {
+        const customerId = req.user.id;
         const {
-            customerId,
             branchReceive,
             branchReturn,
             receiveDate,
             returnDate,
-            evidenceImage,
-            hasDamageWaiver,
             grandTotal,
-            motorbikes,
-            motorbikeDetails // Array of {motorbikeTypeId, quantity, unitPrice}
+            motorbikeDetails, // Array of {motorbikeTypeId, quantity, unitPrice}
+            accessoryDetails, // Array of {accessoryId, quantity}
+            tripContext // Object: {purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures}
         } = req.body;
 
-        // Validate required fields
-        if (!customerId || !branchReceive || !branchReturn || !receiveDate || !returnDate || !evidenceImage || !grandTotal || !motorbikes || !motorbikeDetails) {
+        if (!branchReceive || !branchReturn || !receiveDate || !returnDate || !grandTotal || !motorbikeDetails) {
             return res.status(400).json({
                 success: false,
-                message: 'Tất cả các trường là bắt buộc',
-                missingFields: {
-                    customerId: !customerId,
-                    branchReceive: !branchReceive,
-                    branchReturn: !branchReturn,
-                    receiveDate: !receiveDate,
-                    returnDate: !returnDate,
-                    evidenceImage: !evidenceImage,
-                    grandTotal: !grandTotal,
-                    motorbikes: !motorbikes,
-                    motorbikeDetails: !motorbikeDetails
-                }
+                message: 'Tất cả các trường là bắt buộc'
             });
         }
 
-        // Validate dates
         const receiveDateTime = new Date(receiveDate);
         const returnDateTime = new Date(returnDate);
         const now = new Date();
 
         if (receiveDateTime <= now) {
-            return res.status(400).json({
-                success: false,
-                message: 'Ngày nhận xe phải lớn hơn ngày hiện tại'
-            });
+            return res.status(400).json({ success: false, message: 'Ngày nhận xe phải lớn hơn hiện tại' });
         }
 
         if (returnDateTime <= receiveDateTime) {
-            return res.status(400).json({
-                success: false,
-                message: 'Ngày trả xe phải lớn hơn ngày nhận xe'
-            });
+            return res.status(400).json({ success: false, message: 'Ngày trả xe phải lớn hơn ngày nhận xe' });
         }
 
-        // Check if customer exists
-        const customer = await customerModel.findById(customerId);
+        // Kiểm tra người dùng
+        const customer = await userModel.findById(customerId);
         if (!customer) {
-            return res.status(404).json({
-                success: false,
-                message: 'Khách hàng không tồn tại'
-            });
+            return res.status(404).json({ success: false, message: 'Khách hàng không tồn tại' });
         }
 
-        // Check if branches exist
+        // Kiểm tra chi nhánh
         const branchReceiveExists = await branchModel.findById(branchReceive);
         const branchReturnExists = await branchModel.findById(branchReturn);
 
-        if (!branchReceiveExists) {
-            return res.status(404).json({
-                success: false,
-                message: 'Chi nhánh nhận xe không tồn tại'
-            });
+        if (!branchReceiveExists || !branchReturnExists) {
+            return res.status(404).json({ success: false, message: 'Chi nhánh không hợp lệ' });
         }
 
-        if (!branchReturnExists) {
-            return res.status(404).json({
-                success: false,
-                message: 'Chi nhánh trả xe không tồn tại'
-            });
-        }
-
-        // Validate motorbikes availability
-        for (const motorbikeId of motorbikes) {
-            const motorbike = await motorbikeModel.findById(motorbikeId);
-            if (!motorbike) {
-                return res.status(404).json({
-                    success: false,
-                    message: `Xe máy với ID ${motorbikeId} không tồn tại`
-                });
-            }
-
-            if (motorbike.status !== 'available') {
-                return res.status(400).json({
-                    success: false,
-                    message: `Xe máy ${motorbike.licensePlate} không khả dụng`
-                });
-            }
-        }
-
-        // Validate motorbike details
+        // Kiểm tra chi tiết loại xe
         for (const detail of motorbikeDetails) {
             const motorbikeType = await motorbikeTypeModel.findById(detail.motorbikeTypeId);
             if (!motorbikeType) {
                 return res.status(404).json({
                     success: false,
-                    message: `Loại xe máy với ID ${detail.motorbikeTypeId} không tồn tại`
+                    message: `Loại xe ${detail.motorbikeTypeId} không tồn tại`
                 });
             }
 
-            if (detail.quantity < 1) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Số lượng xe phải lớn hơn 0'
-                });
-            }
-
-            if (detail.unitPrice < 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Đơn giá không thể âm'
-                });
+            if (detail.quantity < 1 || detail.unitPrice < 0) {
+                return res.status(400).json({ success: false, message: 'Thông tin loại xe không hợp lệ' });
             }
         }
 
-        // Calculate total to validate grandTotal
-        const calculatedTotal = motorbikeDetails.reduce((total, detail) => {
-            return total + (detail.unitPrice * detail.quantity);
+        // Kiểm tra phụ kiện (nếu có)
+        if (accessoryDetails && Array.isArray(accessoryDetails)) {
+            for (const detail of accessoryDetails) {
+                if (!detail.accessoryId || detail.quantity < 1) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Thông tin phụ kiện không hợp lệ'
+                    });
+                }
+            }
+        }
+
+        // Kiểm tra tripContext (nếu có)
+        if (tripContext) {
+            const requiredFields = ['purpose', 'distanceCategory', 'numPeople', 'terrain', 'luggage'];
+            for (const field of requiredFields) {
+                if (!tripContext[field]) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Trường ${field} là bắt buộc trong tripContext`
+                    });
+                }
+            }
+        }
+
+        // Tính số ngày thuê
+        const rentalDays = Math.ceil((returnDateTime - receiveDateTime) / (1000 * 60 * 60 * 24));
+
+        // Tính tiền xe
+        const motorbikeTotal = motorbikeDetails.reduce((total, detail) => {
+            const unitPrice = Number(detail.unitPrice) || 0;
+            const waiverFee = Number(detail.damageWaiverFee) || 0;
+
+            return total + (unitPrice + waiverFee) * detail.quantity * rentalDays;
         }, 0);
 
-        if (Math.abs(calculatedTotal - grandTotal) > 0.01) { // Allow small floating point differences
+        // Tính tiền phụ kiện
+        let accessoryTotal = 0;
+        if (accessoryDetails && Array.isArray(accessoryDetails)) {
+            const accessoryIds = accessoryDetails.map(item => item.accessoryId);
+            const accessories = await accessoryModel.find({ _id: { $in: accessoryIds } });
+
+            accessoryTotal = accessoryDetails.reduce((sum, item) => {
+                const matched = accessories.find(a => a._id.toString() === item.accessoryId);
+                const price = matched ? matched.price : 0;
+                return sum + item.quantity * price;
+            }, 0);
+        }
+
+        // Tổng cuối cùng
+        const calculatedTotal = Math.round((motorbikeTotal + accessoryTotal) * 100) / 100;
+
+
+        console.log('>>> BE: motorbikeTotal', motorbikeTotal);
+        console.log('>>> BE: accessoryTotal', accessoryTotal);
+        console.log('>>> BE: calculatedTotal', calculatedTotal);
+        console.log('>>> BE: grandTotal từ FE gửi lên', grandTotal);
+
+        if (Math.abs(calculatedTotal - grandTotal) > 0.01) {
             return res.status(400).json({
                 success: false,
                 message: 'Tổng tiền không khớp với chi tiết đơn hàng'
             });
         }
 
-        // Create rental order
+
+
+        // 🔥 Tự động chọn xe máy khả dụng theo từng loại
+        let selectedMotorbikes = [];
+
+        for (const detail of motorbikeDetails) {
+            const { motorbikeTypeId, quantity } = detail;
+
+            // Ensure ObjectId type for query
+            const typeId = typeof motorbikeTypeId === 'string' ? new mongoose.Types.ObjectId(motorbikeTypeId) : motorbikeTypeId;
+            const branchObjId = typeof branchReceive === 'string' ? new mongoose.Types.ObjectId(branchReceive) : branchReceive;
+
+            // Lấy tất cả xe khả dụng của loại này tại chi nhánh nhận
+            const availableMotorbikes = await motorbikeModel.find({
+                motorbikeType: typeId,
+                branchId: branchObjId,
+                status: 'available'
+            }).sort({ createdAt: 1 });
+
+            console.log(`>>> Checking motorbikeType ${motorbikeTypeId}`);
+            console.log(`- Available: ${availableMotorbikes.length}, Needed: ${quantity}`);
+
+            if (availableMotorbikes.length < quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Không đủ xe loại ${motorbikeTypeId} trong chi nhánh nhận xe (có ${availableMotorbikes.length}, cần ${quantity})`
+                });
+            }
+
+            // Lấy đúng số lượng xe cần thiết và gộp vào mảng motorbikes
+            const selected = availableMotorbikes.slice(0, quantity);
+            const formatted = selected.map(mb => ({
+                motorbikeId: mb._id,
+                motorbikeTypeId: typeId,
+                quantity: 1
+            }));
+            selectedMotorbikes.push(...formatted);
+        }
+
+
+
         const newRentalOrder = new rentalOrderModel({
             customerId,
             branchReceive,
             branchReturn,
             receiveDate: receiveDateTime,
             returnDate: returnDateTime,
-            evidenceImage,
-            hasDamageWaiver,
             grandTotal,
-            motorbikes
+            motorbikes: selectedMotorbikes
         });
+
 
         await newRentalOrder.save();
 
-        // Create motorbike details
+        // Tạo tripContext nếu có
+        if (tripContext) {
+            await tripContextModel.create({
+                orderId: newRentalOrder._id,
+                ...tripContext
+            });
+        }
+
+        // Tạo chi tiết loại xe
         const motorbikeDetailPromises = motorbikeDetails.map(detail => {
             return new rentalOrderMotorbikeDetailModel({
                 rentalOrderId: newRentalOrder._id,
                 motorbikeTypeId: detail.motorbikeTypeId,
                 quantity: detail.quantity,
-                unitPrice: detail.unitPrice
+                unitPrice: detail.unitPrice,
+                damageWaiverFee: detail.damageWaiverFee
             }).save();
         });
-
         await Promise.all(motorbikeDetailPromises);
 
-        // Update motorbike status to reserved
-        const updateMotorbikePromises = motorbikes.map(motorbikeId => {
-            return motorbikeModel.findByIdAndUpdate(motorbikeId, { status: 'reserved' });
-        });
+        // Tạo chi tiết phụ kiện (nếu có)
+        if (accessoryDetails && accessoryDetails.length > 0) {
+            const accessoryDetailPromises = accessoryDetails.map(detail => {
+                return new accessoryDetailModel({
+                    rentalOrderId: newRentalOrder._id,
+                    accessoryId: detail.accessoryId,
+                    quantity: detail.quantity
+                }).save();
+            });
+            await Promise.all(accessoryDetailPromises);
+        }
 
-        await Promise.all(updateMotorbikePromises);
+        await Promise.all(
+            selectedMotorbikes.map(item =>
+                motorbikeModel.findByIdAndUpdate(item.motorbikeId, { status: 'reserved' })
+            )
+        );
 
-        // Populate references for response
+
+        // Populate dữ liệu trả về
         await newRentalOrder.populate([
             { path: 'customerId' },
             { path: 'branchReceive' },
@@ -199,6 +254,7 @@ const createRentalOrder = async (req, res) => {
     }
 };
 
+
 // Get all rental orders for a customer
 const getCustomerRentalOrders = async (req, res) => {
     try {
@@ -206,7 +262,7 @@ const getCustomerRentalOrders = async (req, res) => {
         const { status, page = 1, limit = 10 } = req.query;
 
         // Validate customer exists
-        const customer = await customerModel.findById(customerId);
+        const customer = await userModel.findById(customerId);
         if (!customer) {
             return res.status(404).json({
                 success: false,
@@ -434,7 +490,7 @@ const getCustomerOrderStatistics = async (req, res) => {
         const { customerId } = req.params;
 
         // Validate customer exists
-        const customer = await customerModel.findById(customerId);
+        const customer = await userModel.findById(customerId);
         if (!customer) {
             return res.status(404).json({
                 success: false,

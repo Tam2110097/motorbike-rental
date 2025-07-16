@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { Table, Button, Typography, Image, message } from 'antd'
-import IncrementAnDecrementButton from '../../../../components/IncrementAnDecrementButton'
-import { useBooking } from '../../../../context/BookingContext';
+import IncrementAnDecrementButton from '../../../../../components/IncrementAnDecrementButton'
+import { useBooking } from '../../../../../context/BookingContext';
 
 
 const { Title, Text, Paragraph } = Typography

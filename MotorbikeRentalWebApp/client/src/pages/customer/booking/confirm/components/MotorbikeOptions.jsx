@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Select, Card, Typography, Space } from 'antd'
-import { useBooking } from '../../../../context/BookingContext'
+import { useBooking } from '../../../../../context/BookingContext'
 import axios from 'axios'
 
 const { Option } = Select

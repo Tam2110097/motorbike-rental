@@ -42,7 +42,9 @@ import DeleteMotorbikePage from './pages/employee/motorbike/DeleteMotorbikePage'
 import AvailableMotorbikePage from './pages/customer/booking/AvailableMotorbikePage'
 import MotorbikeDetailPage from './pages/customer/booking/MotorbikeDetailPage'
 import { BookingProvider } from './context/BookingContext'
-import ConfirmBikeModel from './pages/customer/booking/ConfirmBikeModel'
+import ConfirmBikeModel from './pages/customer/booking/confirm/ConfirmBikeModel'
+import OrderReviewPage from './pages/customer/booking/order-review/OrderReviewPage'
+import CheckoutPage from './pages/customer/booking/checkout/CheckoutPage'
 
 function App() {
 
@@ -116,8 +118,22 @@ function App() {
                 <ConfirmBikeModel />
               </BookingProvider>
             } />
+          <Route
+            path='/booking/order-review'
+            element={
+              <BookingProvider>
+                <OrderReviewPage />
+              </BookingProvider>
+            } />
+          <Route
+            path='/booking/checkout'
+            element={
+              <BookingProvider>
+                <CheckoutPage />
+              </BookingProvider>
+            } />
         </Routes>
-      </BrowserRouter>
+      </BrowserRouter >
     </>
   )
 }

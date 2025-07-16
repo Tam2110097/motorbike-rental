@@ -34,22 +34,6 @@ const {
 } = require('../controllers/admin-controller/pricingRuleCtrl');
 
 const {
-    createTripPurpose,
-    getAllTripPurposes,
-    getTripPurposeById,
-    updateTripPurpose,
-    deleteTripPurpose
-} = require('../controllers/admin-controller/tripPurposeCtrl');
-
-const {
-    createDistanceSuggestion,
-    getAllDistanceSuggestions,
-    getDistanceSuggestionById,
-    updateDistanceSuggestion,
-    deleteDistanceSuggestion
-} = require('../controllers/admin-controller/distanceSuggestionCtrl');
-
-const {
     createSpec,
     getAllSpecs,
     getSpecById,
@@ -126,34 +110,6 @@ router.get('/pricing-rule/get-by-id/:id', getPricingRuleById);
 router.put('/pricing-rule/update/:id', updatePricingRule);
 // delete pricing rule
 router.delete('/pricing-rule/delete/:id', deletePricingRule);
-
-/*
-**************ADMIN ROUTE TRIP PURPOSE**************
-*/
-// create trip purpose
-router.post('/trip-purpose/create', createTripPurpose);
-// get all trip purposes
-router.get('/trip-purpose/get-all', getAllTripPurposes);
-// get trip purpose by id
-router.get('/trip-purpose/get-by-id/:id', getTripPurposeById);
-// update trip purpose
-router.put('/trip-purpose/update/:id', updateTripPurpose);
-// delete trip purpose
-router.delete('/trip-purpose/delete/:id', deleteTripPurpose);
-
-/*
-**************ADMIN ROUTE DISTANCE SUGGESTION**************
-*/
-// create distance suggestion
-router.post('/distance-suggestion/create', createDistanceSuggestion);
-// get all distance suggestions
-router.get('/distance-suggestion/get-all', getAllDistanceSuggestions);
-// get distance suggestion by id
-router.get('/distance-suggestion/get-by-id/:id', getDistanceSuggestionById);
-// update distance suggestion
-router.put('/distance-suggestion/update/:id', updateDistanceSuggestion);
-// delete distance suggestion
-router.delete('/distance-suggestion/delete/:id', deleteDistanceSuggestion);
 
 /*
 **************ADMIN ROUTE SPECIFICATION CRUD**************

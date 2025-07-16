@@ -35,7 +35,7 @@ router.get('/motorbike-type/available', getAvailableMotorbikeTypes);
 
 // Order routes
 // Create rental order
-router.post('/order/create', createRentalOrder);
+router.post('/order/create', authMiddleware, createRentalOrder);
 // Get customer rental orders
 router.get('/order/customer/:customerId', getCustomerRentalOrders);
 // Get rental order by ID

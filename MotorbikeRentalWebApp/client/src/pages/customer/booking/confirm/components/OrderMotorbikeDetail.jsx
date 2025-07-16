@@ -1,7 +1,7 @@
 import React, { } from 'react'
-import { Card, Row, Col, Typography, Image, Tag } from 'antd'
-import IncrementAnDecrementButton from '../../../../components/IncrementAnDecrementButton'
-import { useBooking } from '../../../../context/BookingContext'
+import { Card, Row, Col, Typography, Image, Tag, Checkbox } from 'antd'
+import IncrementAnDecrementButton from '../../../../../components/IncrementAnDecrementButton'
+import { useBooking } from '../../../../../context/BookingContext'
 import RemoveButton from './RemoveButton'
 import MotorbikeOptions from './MotorbikeOptions'
 
@@ -10,24 +10,20 @@ const { Title, Text } = Typography
 const OrderMotorbikeDetail = () => {
     const { bookingData, setBookingData } = useBooking()
 
-    // useEffect(() => {
-    //     // Sync motorbikes with motorbikeTypes
-    //     if (Array.isArray(bookingData.motorbikeTypes)) {
-    //         setBookingData(prev => ({
-    //             ...prev,
-    //             motorbikes: prev.motorbikeTypes.map(motorbikeType => ({
-    //                 motorbikeType,
-    //                 quantity: 1
-    //             }))
-    //         }))
-    //     }
-    // }, [bookingData.motorbikeTypes, setBookingData])
-
     const handleQuantityChange = (newQuantity, index) => {
         setBookingData(prev => ({
             ...prev,
             motorbikes: prev.motorbikes.map((item, i) =>
                 i === index ? { ...item, quantity: newQuantity } : item
+            )
+        }));
+    };
+
+    const handleDamageWaiverChange = (checked, index) => {
+        setBookingData(prev => ({
+            ...prev,
+            motorbikes: prev.motorbikes.map((item, i) =>
+                i === index ? { ...item, hasDamageWaiver: checked } : item
             )
         }));
     };
@@ -87,6 +83,17 @@ const OrderMotorbikeDetail = () => {
                                 <Tag color="blue" style={{ marginTop: 8, fontSize: 15, borderRadius: 6, padding: '2px 10px' }}>
                                     {item.motorbikeType.availableCount} xe có sẵn
                                 </Tag>
+                                <div style={{ marginTop: 12 }}>
+                                    <Checkbox
+                                        checked={item.hasDamageWaiver || false}
+                                        onChange={(e) => handleDamageWaiverChange(e.target.checked, index)}
+                                        style={{ fontSize: 14 }}
+                                    >
+                                        <Text style={{ fontSize: 14, color: '#1890ff' }}>
+                                            Bảo hiểm thiệt hại ({new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.motorbikeType.dailyDamageWaiver)}/ngày)
+                                        </Text>
+                                    </Checkbox>
+                                </div>
                             </Col>
                             <Col xs={24} sm={8}>
                                 <Text strong style={{ fontSize: 15 }}>Số lượng:</Text>
