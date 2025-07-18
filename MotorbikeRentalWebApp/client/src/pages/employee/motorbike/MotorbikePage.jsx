@@ -17,7 +17,13 @@ const MotorbikePage = () => {
     const getAllMotorbikes = async () => {
         setLoading(true);
         try {
-            const res = await axios.get("http://localhost:8080/api/v1/employee/motorbike/get-all");
+            const res = await axios.get("http://localhost:8080/api/v1/employee/motorbike/get-all",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setMotorbikes(res.data.motorbikes);
             } else {
@@ -34,7 +40,13 @@ const MotorbikePage = () => {
     const getMotorbikesByBranch = async (branchId) => {
         setLoading(true);
         try {
-            const res = await axios.get(`http://localhost:8080/api/v1/employee/motorbike/get-by-branch/${branchId}`);
+            const res = await axios.get(`http://localhost:8080/api/v1/employee/motorbike/get-by-branch/${branchId}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setMotorbikes(res.data.motorbikes);
             } else {
@@ -50,7 +62,13 @@ const MotorbikePage = () => {
 
     const getAllBranch = async () => {
         try {
-            const res = await axios.get("http://localhost:8080/api/v1/admin/branch/get-all");
+            const res = await axios.get("http://localhost:8080/api/v1/admin/branch/get-all",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setBranchList(res.data.branches);
             } else {

@@ -1,14 +1,14 @@
 import React from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom';
 
-export default function ProtectedRoute({ children }) {
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
+const ProtectedRoute = ({ children, allowedRoles }) => {
+    const user = JSON.parse(localStorage.getItem('user'));
 
-    if (token && user) {
-        return children
+    if (!user || !allowedRoles.includes(user.role?.name)) {
+        return <Navigate to="/not-allowed" replace />;
     }
-    else {
-        return <Navigate to='/login' />
-    }
-}
+
+    return children;
+};
+
+export default ProtectedRoute;

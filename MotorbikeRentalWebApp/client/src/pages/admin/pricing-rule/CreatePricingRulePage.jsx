@@ -20,11 +20,11 @@ const CreatePricingRulePage = () => {
             const res = await axios.post(
                 "http://localhost:8080/api/v1/admin/pricing-rule/create",
                 values,
-                // {
-                //     headers: {
-                //         Authorization: "Bearer " + localStorage.getItem("token"),
-                //     },
-                // }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             dispatch(hideLoading());
             if (res.data.success) {

@@ -17,7 +17,13 @@ const CreateMotorbikePage = () => {
     const [uploading, setUploading] = useState(false);
     const getAllBranch = async () => {
         try {
-            const res = await axios.get("http://localhost:8080/api/v1/admin/branch/get-all");
+            const res = await axios.get("http://localhost:8080/api/v1/admin/branch/get-all",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setBranchList(res.data.branches);
             }
@@ -31,7 +37,13 @@ const CreateMotorbikePage = () => {
 
     const getAllMotorbikeType = async () => {
         try {
-            const res = await axios.get("http://localhost:8080/api/v1/admin/motorbike-type/get-all");
+            const res = await axios.get("http://localhost:8080/api/v1/admin/motorbike-type/get-all",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setMotorbikeTypeList(res.data.motorbikeTypes);
             }
@@ -64,7 +76,12 @@ const CreateMotorbikePage = () => {
 
             const uploadRes = await axios.post(
                 "http://localhost:8080/api/v1/upload",
-                formData
+                formData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
 
             if (uploadRes.data.success) {
@@ -120,7 +137,12 @@ const CreateMotorbikePage = () => {
 
                 const result = await axios.post(
                     "http://localhost:8080/api/v1/employee/motorbike/create",
-                    motorbikeData
+                    motorbikeData,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('token')}`
+                        }
+                    }
                 );
                 results.push(result);
 

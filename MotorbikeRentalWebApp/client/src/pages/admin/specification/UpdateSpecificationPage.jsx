@@ -16,8 +16,20 @@ const UpdateSpecificationPage = () => {
         const fetchData = async () => {
             try {
                 const [typeRes, specRes] = await Promise.all([
-                    axios.get('http://localhost:8080/api/v1/admin/motorbike-type/get-all'),
-                    axios.get(`http://localhost:8080/api/v1/admin/specifications/get-by-id/${id}`)
+                    axios.get('http://localhost:8080/api/v1/admin/motorbike-type/get-all',
+                        {
+                            headers: {
+                                Authorization: `Bearer ${localStorage.getItem('token')}`
+                            }
+                        }
+                    ),
+                    axios.get(`http://localhost:8080/api/v1/admin/specifications/get-by-id/${id}`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${localStorage.getItem('token')}`
+                            }
+                        }
+                    )
                 ]);
 
                 if (typeRes.data.success) {
@@ -55,7 +67,13 @@ const UpdateSpecificationPage = () => {
 
     const onFinishHandler = async (values) => {
         try {
-            const res = await axios.put(`http://localhost:8080/api/v1/admin/specifications/update/${id}`, values);
+            const res = await axios.put(`http://localhost:8080/api/v1/admin/specifications/update/${id}`, values,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 message.success('Cập nhật thông số kỹ thuật thành công');
                 navigate('/admin/specification');

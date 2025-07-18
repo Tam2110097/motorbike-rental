@@ -69,7 +69,8 @@ const loginController = async (req, res) => {
             });
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        // FIX: Add role as string in JWT payload
+        const token = jwt.sign({ id: user._id, role: user.role.name }, process.env.JWT_SECRET, { expiresIn: '1d' });
         res.status(200).send({
             message: 'Login Success',
             success: true,

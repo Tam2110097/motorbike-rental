@@ -16,7 +16,13 @@ const UpdateMotorbikeTypePage = () => {
 
     const getAllPricingRules = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/v1/admin/pricing-rule/get-all');
+            const res = await axios.get('http://localhost:8080/api/v1/admin/pricing-rule/get-all',
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setPricingRuleList(res.data.pricingRules);
             }
@@ -27,7 +33,13 @@ const UpdateMotorbikeTypePage = () => {
 
     const getMotorbikeTypeById = async () => {
         try {
-            const res = await axios.get(`http://localhost:8080/api/v1/admin/motorbike-type/get-by-id/${id}`);
+            const res = await axios.get(`http://localhost:8080/api/v1/admin/motorbike-type/get-by-id/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 const data = res.data.motorbikeType;
                 form.setFieldsValue({

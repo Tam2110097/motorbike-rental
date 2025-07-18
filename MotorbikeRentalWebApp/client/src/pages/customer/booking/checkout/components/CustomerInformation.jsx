@@ -1,18 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Typography, Button } from 'antd';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
 
-// Mô phỏng trạng thái đăng nhập
-const mockUser = {
-    isLoggedIn: true, // Đổi thành true nếu muốn test trạng thái đã đăng nhập
-    name: 'Nguyen Van A',
-    email: 'nguyenvana@example.com',
-};
+const CustomerInformation = ({ bookingData }) => {
+    const navigate = useNavigate();
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [user, setUser] = useState(null);
 
-const CustomerInformation = () => {
-    const [user] = useState(mockUser);
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        setIsLoggedIn(!!token);
+        if (token) {
+            try {
+                const userData = JSON.parse(localStorage.getItem('user'));
+                setUser(userData);
+            } catch {
+                setUser(null);
+            }
+        } else {
+            setUser(null);
+        }
+    }, []);
+
+    const handleLogin = () => {
+        if (bookingData) {
+            localStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        }
+        navigate('/login?redirect=/booking/checkout');
+    };
 
     return (
         <div
@@ -26,7 +43,7 @@ const CustomerInformation = () => {
                 textAlign: 'center',
             }}
         >
-            {user.isLoggedIn ? (
+            {isLoggedIn && user ? (
                 <Title level={5} style={{ color: '#1890ff', fontWeight: 600 }}>
                     👋 Chào mừng, {user.name} ({user.email})!
                 </Title>
@@ -35,11 +52,9 @@ const CustomerInformation = () => {
                     <Title level={5} style={{ color: '#fa541c' }}>
                         Bạn chưa đăng nhập
                     </Title>
-                    <Link to="/login">
-                        <Button type="primary" style={{ marginTop: 12 }}>
-                            Đăng nhập ngay
-                        </Button>
-                    </Link>
+                    <Button type="primary" style={{ marginTop: 12 }} onClick={handleLogin}>
+                        Đăng nhập ngay
+                    </Button>
                 </>
             )}
         </div>

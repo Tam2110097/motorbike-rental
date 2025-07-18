@@ -13,7 +13,13 @@ const CreateSpecificationPage = () => {
     useEffect(() => {
         const fetchMotorbikeTypes = async () => {
             try {
-                const res = await axios.get('http://localhost:8080/api/v1/admin/motorbike-type/get-without-spec');
+                const res = await axios.get('http://localhost:8080/api/v1/admin/motorbike-type/get-without-spec',
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('token')}`
+                        }
+                    }
+                );
                 if (res.data.success) {
                     setMotorbikeTypes(res.data.motorbikeTypes);
                 }

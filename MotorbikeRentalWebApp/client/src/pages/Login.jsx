@@ -8,6 +8,7 @@ import axios from 'axios'
 
 const Login = () => {
     const navigate = useNavigate()
+    // const location = useLocation()
     const dispatch = useDispatch()
 
     const onFinishHandler = async (values) => {
@@ -19,7 +20,21 @@ const Login = () => {
                 localStorage.setItem("token", res.data.token)
                 localStorage.setItem("user", JSON.stringify(res.data.user))
                 message.success('Login Successfully')
-                navigate('/');
+                // Get redirect path from query string
+                // const params = new URLSearchParams(location.search);
+                const role = res.data.user.role.name;
+                console.log('>>>>>>>>>', role)
+                if (role === 'admin') {
+                    navigate('/admin', { replace: true });
+                } else if (role === 'employee') {
+                    navigate('/employee', { replace: true });
+                } else if (role === 'customer') {
+                    navigate('/', { replace: true });
+                } else {
+                    navigate('/unauthorized', { replace: true }); // fallback nếu cần
+                }
+                // const redirectPath = params.get('redirect') || '/';
+                // navigate(redirectPath, { replace: true });
             }
             else {
                 message.error(res.data.message)

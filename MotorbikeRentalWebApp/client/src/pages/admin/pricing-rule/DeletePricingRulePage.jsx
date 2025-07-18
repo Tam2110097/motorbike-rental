@@ -16,11 +16,11 @@ const DeletePricingRulePage = () => {
         try {
             const res = await axios.delete(
                 `http://localhost:8080/api/v1/admin/pricing-rule/delete/${id}`,
-                // {
-                //   headers: {
-                //     Authorization: "Bearer " + localStorage.getItem("token"),
-                //   },
-                // }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             dispatch(hideLoading()); // Ẩn loading sau khi API trả về
             if (res.data.success) {

@@ -15,11 +15,11 @@ const DeleteAccessoryPage = () => {
         try {
             await axios.delete(
                 `http://localhost:8080/api/v1/employee/accessory/delete-accessory/${id}`,
-                // {
-                //   headers: {
-                //     Authorization: "Bearer " + localStorage.getItem("token"),
-                //   },
-                // }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             dispatch(hideLoading()); // Ẩn loading sau khi API trả về
             message.success("Xoá sản phẩm thành công");

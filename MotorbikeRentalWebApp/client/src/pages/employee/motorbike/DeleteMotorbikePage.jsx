@@ -20,7 +20,13 @@ const DeleteMotorbikePage = () => {
     const getMotorbikeById = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`http://localhost:8080/api/v1/employee/motorbike/get-by-id/${id}`);
+            const res = await axios.get(`http://localhost:8080/api/v1/employee/motorbike/get-by-id/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setMotorbike(res.data.motorbike);
             } else {
@@ -45,7 +51,12 @@ const DeleteMotorbikePage = () => {
         dispatch(showLoading());
         try {
             const res = await axios.delete(
-                `http://localhost:8080/api/v1/employee/motorbike/delete/${id}`
+                `http://localhost:8080/api/v1/employee/motorbike/delete/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
             dispatch(hideLoading());
             if (res.data.success) {

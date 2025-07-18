@@ -17,7 +17,12 @@ const UpdateAccountPage = () => {
     const getAccountById = async () => {
         try {
             const res = await axios.get(
-                `http://localhost:8080/api/v1/admin/account/get-by-id/${id}`
+                `http://localhost:8080/api/v1/admin/account/get-by-id/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
             if (res.data.success) {
                 const accountData = res.data.user;
@@ -41,11 +46,11 @@ const UpdateAccountPage = () => {
                 {
                     ...values,
                 },
-                // {
-                //     headers: {
-                //       Authorization: "Bearer " + localStorage.getItem("token"),
-                //     },
-                //   }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             dispatch(hideLoading());
             if (res.data.success) {

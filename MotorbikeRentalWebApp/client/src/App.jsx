@@ -45,6 +45,8 @@ import { BookingProvider } from './context/BookingContext'
 import ConfirmBikeModel from './pages/customer/booking/confirm/ConfirmBikeModel'
 import OrderReviewPage from './pages/customer/booking/order-review/OrderReviewPage'
 import CheckoutPage from './pages/customer/booking/checkout/CheckoutPage'
+import MyOrderPage from './pages/customer/order/MyOrderPage'
+import NotAllowed from './pages/NotAllowed';
 
 function App() {
 
@@ -62,46 +64,171 @@ function App() {
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
           {/* ====admin==== */}
-          <Route path='/admin' element={<AdminPage />} />
+          <Route path='/admin' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminPage />
+            </ProtectedRoute>
+          } />
           {/* ====admin-account==== */}
-          <Route path='/admin/account' element={<AccountPage />} />
-          <Route path='/admin/account/create' element={<CreateAccountPage />} />
-          <Route path='/admin/account/delete/:id' element={<DeleteAccountPage />} />
-          <Route path='/admin/account/update/:id' element={<UpdateAccountPage />} />
+          <Route path='/admin/account' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AccountPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/account/create' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CreateAccountPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/account/delete/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DeleteAccountPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/account/update/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UpdateAccountPage />
+            </ProtectedRoute>
+          } />
           {/* ====admin-branch==== */}
-          <Route path='/admin/branch' element={<BranchPage />} />
-          <Route path='/admin/branch/create' element={<CreateBranchPage />} />
-          <Route path='/admin/branch/update/:id' element={<UpdateBranchPage />} />
-          <Route path='/admin/branch/delete/:id' element={<DeleteBrachPage />} />
+          <Route path='/admin/branch' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <BranchPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/branch/create' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CreateBranchPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/branch/update/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UpdateBranchPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/branch/delete/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DeleteBrachPage />
+            </ProtectedRoute>
+          } />
           {/* ====admin-motorbike-type==== */}
-          <Route path='/admin/motorbike-type' element={<MotorbikeTypePage />} />
-          <Route path='/admin/motorbike-type/create' element={<CreateMotorbikeTypePage />} />
-          <Route path='/admin/motorbike-type/update/:id' element={<UpdateMotorbikeTypePage />} />
-          <Route path='/admin/motorbike-type/delete/:id' element={<DeleteMotorbikeTypePage />} />
+          <Route path='/admin/motorbike-type' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <MotorbikeTypePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/motorbike-type/create' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CreateMotorbikeTypePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/motorbike-type/update/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UpdateMotorbikeTypePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/motorbike-type/delete/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DeleteMotorbikeTypePage />
+            </ProtectedRoute>
+          } />
           {/* ====admin-pricing-rule==== */}
-          <Route path='/admin/pricing-rule' element={<PricingRulePage />} />
-          <Route path='/admin/pricing-rule/create' element={<CreatePricingRulePage />} />
-          <Route path='/admin/pricing-rule/update/:id' element={<UpdatePricingRulePage />} />
-          <Route path='/admin/pricing-rule/delete/:id' element={<DeletePricingRulePage />} />
+          <Route path='/admin/pricing-rule' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <PricingRulePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/pricing-rule/create' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CreatePricingRulePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/pricing-rule/update/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UpdatePricingRulePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/pricing-rule/delete/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DeletePricingRulePage />
+            </ProtectedRoute>
+          } />
           {/* ====admin-specification==== */}
-          <Route path='/admin/specification' element={<SpecificationPage />} />
-          <Route path='/admin/specification/create' element={<CreateSpecificationPage />} />
-          <Route path='/admin/specification/update/:id' element={<UpdateSpecificationPage />} />
-          <Route path='/admin/specification/delete/:id' element={<DeleteSpecificationPage />} />
+          <Route path='/admin/specification' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <SpecificationPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/specification/create' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CreateSpecificationPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/specification/update/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UpdateSpecificationPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/admin/specification/delete/:id' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DeleteSpecificationPage />
+            </ProtectedRoute>
+          } />
           {/* ====admin-feedback==== */}
-          <Route path='/admin/feedback' element={<FeedBackPage />} />
+          <Route path='/admin/feedback' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <FeedBackPage />
+            </ProtectedRoute>
+          } />
           {/* ====employee==== */}
-          <Route path='/employee' element={<EmployeePage />} />
+          <Route path='/employee' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <EmployeePage />
+            </ProtectedRoute>
+          } />
           {/* ====employee-accessory==== */}
-          <Route path='/employee/accessory' element={<AccessoryPage />} />
-          <Route path='/employee/accessory/create' element={<CreateAccessoryPage />} />
-          <Route path='/employee/accessory/update/:id' element={<UpdateAccessoryPage />} />
-          <Route path='/employee/accessory/delete/:id' element={<DeleteAccessoryPage />} />
+          <Route path='/employee/accessory' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <AccessoryPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/accessory/create' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <CreateAccessoryPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/accessory/update/:id' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <UpdateAccessoryPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/accessory/delete/:id' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <DeleteAccessoryPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/not-allowed' element={<NotAllowed />} />
           {/* ====employee-motorbike==== */}
-          <Route path='/employee/motorbike' element={<MotorbikePage />} />
-          <Route path='/employee/motorbike/create' element={<CreateMotorbikePage />} />
-          <Route path='/employee/motorbike/update/:id' element={<UpdateMotorbikePage />} />
-          <Route path='/employee/motorbike/delete/:id' element={<DeleteMotorbikePage />} />
+          <Route path='/employee/motorbike' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <MotorbikePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/motorbike/create' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <CreateMotorbikePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/motorbike/update/:id' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <UpdateMotorbikePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/motorbike/delete/:id' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <DeleteMotorbikePage />
+            </ProtectedRoute>
+          } />
           {/* ====customer==== */}
           <Route
             path='/booking/available-motorbike'
@@ -132,6 +259,7 @@ function App() {
                 <CheckoutPage />
               </BookingProvider>
             } />
+          <Route path='/order/my-order' element={<MyOrderPage />} />
         </Routes>
       </BrowserRouter >
     </>

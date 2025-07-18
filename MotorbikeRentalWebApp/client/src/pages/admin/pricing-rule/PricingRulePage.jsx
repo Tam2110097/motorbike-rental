@@ -12,7 +12,13 @@ const PricingRulePage = () => {
 
     const getAllPricingRules = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/v1/admin/pricing-rule/get-all');
+            const res = await axios.get('http://localhost:8080/api/v1/admin/pricing-rule/get-all',
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setPricingRules(res.data.pricingRules);
             }

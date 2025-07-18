@@ -17,7 +17,12 @@ const UpdatePricingRulePage = () => {
     const getPricingRuleById = async () => {
         try {
             const res = await axios.get(
-                `http://localhost:8080/api/v1/admin/pricing-rule/get-by-id/${id}`
+                `http://localhost:8080/api/v1/admin/pricing-rule/get-by-id/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
             if (res.data.success) {
                 const pricingRuleData = res.data.pricingRule;
@@ -42,11 +47,11 @@ const UpdatePricingRulePage = () => {
                 {
                     ...values,
                 },
-                // {
-                //     headers: {
-                //       Authorization: "Bearer " + localStorage.getItem("token"),
-                //     },
-                //   }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             dispatch(hideLoading());
             if (res.data.success) {

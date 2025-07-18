@@ -20,11 +20,11 @@ const CreateBranchPage = () => {
             const res = await axios.post(
                 "http://localhost:8080/api/v1/admin/branch/create",
                 values,
-                // {
-                //     headers: {
-                //         Authorization: "Bearer " + localStorage.getItem("token"),
-                //     },
-                // }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             dispatch(hideLoading());
             if (res.data.success) {

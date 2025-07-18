@@ -18,7 +18,12 @@ const UpdateBranchPage = () => {
     const getBranchById = async () => {
         try {
             const res = await axios.get(
-                `http://localhost:8080/api/v1/admin/branch/get-by-id/${id}`
+                `http://localhost:8080/api/v1/admin/branch/get-by-id/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
             if (res.data.success) {
                 const branchData = res.data.branch;
@@ -43,11 +48,11 @@ const UpdateBranchPage = () => {
                 {
                     ...values,
                 },
-                // {
-                //     headers: {
-                //       Authorization: "Bearer " + localStorage.getItem("token"),
-                //     },
-                //   }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             dispatch(hideLoading());
             if (res.data.success) {

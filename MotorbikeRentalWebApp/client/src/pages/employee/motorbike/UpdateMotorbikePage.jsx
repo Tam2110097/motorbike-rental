@@ -20,7 +20,13 @@ const UpdateMotorbikePage = () => {
     // Get motorbike by ID
     const getMotorbikeById = async () => {
         try {
-            const res = await axios.get(`http://localhost:8080/api/v1/employee/motorbike/get-by-id/${id}`);
+            const res = await axios.get(`http://localhost:8080/api/v1/employee/motorbike/get-by-id/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 const motorbikeData = res.data.motorbike;
                 setMotorbike(motorbikeData);
@@ -43,7 +49,13 @@ const UpdateMotorbikePage = () => {
 
     const getAllBranch = async () => {
         try {
-            const res = await axios.get("http://localhost:8080/api/v1/admin/branch/get-all");
+            const res = await axios.get("http://localhost:8080/api/v1/admin/branch/get-all",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setBranchList(res.data.branches);
             } else {
@@ -56,7 +68,13 @@ const UpdateMotorbikePage = () => {
 
     const getAllMotorbikeType = async () => {
         try {
-            const res = await axios.get("http://localhost:8080/api/v1/admin/motorbike-type/get-all");
+            const res = await axios.get("http://localhost:8080/api/v1/admin/motorbike-type/get-all",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setMotorbikeTypeList(res.data.motorbikeTypes);
             } else {
@@ -81,7 +99,12 @@ const UpdateMotorbikePage = () => {
 
             const uploadRes = await axios.post(
                 "http://localhost:8080/api/v1/upload",
-                formData
+                formData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
 
             if (uploadRes.data.success) {
@@ -127,7 +150,12 @@ const UpdateMotorbikePage = () => {
 
             const res = await axios.put(
                 `http://localhost:8080/api/v1/employee/motorbike/update/${id}`,
-                updateData
+                updateData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
 
             if (res.data.success) {

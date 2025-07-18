@@ -25,12 +25,12 @@ const CreateAccessoryPage = () => {
             const uploadRes = await axios.post(
                 "http://localhost:8080/api/v1/upload",
                 formData,
-                // {
-                //     headers: {
-                //         "Content-Type": "multipart/form-data",
-                //         Authorization: `Bearer ${localStorage.getItem("token")}`,
-                //     },
-                // }
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
             );
             if (!uploadRes.data.success) {
                 message.error("Tải ảnh lên thất bại!");
@@ -53,11 +53,11 @@ const CreateAccessoryPage = () => {
                     image: updatedValues.image,
                     description: updatedValues.description,
                 },
-                // {
-                //     headers: {
-                //         Authorization: "Bearer " + localStorage.getItem("token"),
-                //     },
-                // }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             if (res.data.success) {
                 message.success("Thêm phụ kiện thành công");

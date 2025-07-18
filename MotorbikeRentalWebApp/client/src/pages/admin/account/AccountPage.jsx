@@ -12,7 +12,13 @@ const AccountPage = () => {
 
     const getAllAccounts = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/v1/admin/account/get-all');
+            const res = await axios.get('http://localhost:8080/api/v1/admin/account/get-all',
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 setAccounts(res.data.users);
             }

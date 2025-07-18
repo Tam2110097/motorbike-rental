@@ -24,11 +24,11 @@ const UpdateAccessoryPage = () => {
         try {
             const res = await axios.get(
                 `http://localhost:8080/api/v1/employee/accessory/get-accessory-by-id/${id}`,
-                // {
-                //   headers: {
-                //     Authorization: `Bearer ${localStorage.getItem("token")}`,
-                //   },
-                // }
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
             );
             if (res.data.success) {
                 setAccessory(res.data.accessory);
@@ -48,11 +48,11 @@ const UpdateAccessoryPage = () => {
 
             const resAccessory = await axios.get(
                 `http://localhost:8080/api/v1/employee/accessory/get-accessory-by-id/${id}`,
-                // {
-                //   headers: {
-                //     Authorization: `Bearer ${localStorage.getItem("token")}`,
-                //   },
-                // }
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
             );
             //Khong cap nhat anh
             if (
@@ -67,18 +67,18 @@ const UpdateAccessoryPage = () => {
                 const res = await axios.put(
                     `http://localhost:8080/api/v1/employee/accessory/update-accessory/${id}`,
                     updatedValues,
-                    //   {
-                    //     headers: {
-                    //       Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    //     },
-                    //   }
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                    }
                 );
 
                 if (res.data.success) {
                     message.success("Cập nhật sản phẩm thành công!");
                     form.resetFields();
                     setSelectedFile(null);
-                    navigate("/admin/product");
+                    navigate("/employee/accessory");
                 } else {
                     message.error(res.data.message);
                 }
@@ -92,12 +92,12 @@ const UpdateAccessoryPage = () => {
             const uploadRes = await axios.post(
                 "http://localhost:8080/api/v1/upload",
                 formData,
-                // {
-                //   headers: {
-                //     "Content-Type": "multipart/form-data",
-                //     Authorization: `Bearer ${localStorage.getItem("token")}`,
-                //   },
-                // }
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
             );
 
             if (!uploadRes.data.success) {
@@ -124,9 +124,9 @@ const UpdateAccessoryPage = () => {
             const res = await axios.put(
                 `http://localhost:8080/api/v1/employee/accessory/update-accessory/${id}`,
                 updatedValues,
-                // {
-                //   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                // }
+                {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                }
             );
 
             if (res.data.success) {

@@ -15,7 +15,12 @@ const DeleteMotorbikeTypePage = () => {
         dispatch(showLoading());
         try {
             const res = await axios.delete(
-                `http://localhost:8080/api/v1/admin/motorbike-type/delete/${id}`
+                `http://localhost:8080/api/v1/admin/motorbike-type/delete/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
             );
             dispatch(hideLoading());
             if (res.data.success) {

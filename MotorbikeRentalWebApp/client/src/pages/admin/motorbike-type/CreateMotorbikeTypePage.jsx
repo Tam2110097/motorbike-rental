@@ -71,11 +71,11 @@ const CreateMotorbikeTypePage = () => {
                     dailyDamageWaiver: Number(updatedValues.dailyDamageWaiver),
                     pricingRule: updatedValues.pricingRule,
                 },
-                // {
-                //     headers: {
-                //         Authorization: "Bearer " + localStorage.getItem("token"),
-                //     },
-                // }
+                {
+                    headers: {
+                        Authorization: "Bearer " + localStorage.getItem("token"),
+                    },
+                }
             );
             if (res.data.success) {
                 message.success("Thêm loại xe thành công");

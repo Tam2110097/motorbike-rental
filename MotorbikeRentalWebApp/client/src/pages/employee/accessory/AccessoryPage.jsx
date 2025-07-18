@@ -13,11 +13,11 @@ const AccessoryPage = () => {
         try {
             const res = await axios.get(
                 "http://localhost:8080/api/v1/employee/accessory/get-all-accessories",
-                // {
-                //   headers: {
-                //     Authorization: `Bearer ${localStorage.getItem("token")}`,
-                //   },
-                // }
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
             );
             if (res.data.success) {
                 setAccessories(res.data.accessories);

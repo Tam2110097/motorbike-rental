@@ -5,12 +5,12 @@ import PlaceOrderButton from './components/PlaceOrderButton'
 import HeaderBar from '../../../../components/HeaderBar'
 import { Layout } from 'antd'
 import { useBooking } from '../../../../context/BookingContext';
-import axios from 'axios';
+// import axios from 'axios';
 import { message } from 'antd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const { Content } = Layout
-const token = localStorage.getItem('token');
+// const token = localStorage.getItem('token');
 
 const pageTitleStyle = {
     textAlign: 'center',
@@ -29,8 +29,32 @@ const pageTitleStyle = {
 };
 
 const CheckoutPage = () => {
-    const { bookingData } = useBooking();
+    const { bookingData, setBookingData } = useBooking();
     const [loading, setLoading] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    // const navigate = useNavigate();
+
+    useEffect(() => {
+        // Check login status (adjust according to your auth logic)
+        const token = localStorage.getItem('token');
+        setIsLoggedIn(!!token);
+    }, []);
+
+    // Restore booking context if present after login
+    useEffect(() => {
+        const pendingBooking = localStorage.getItem('pendingBooking');
+        if (pendingBooking) {
+            try {
+                const parsed = JSON.parse(pendingBooking);
+                if (parsed && setBookingData) {
+                    setBookingData(parsed);
+                }
+                localStorage.removeItem('pendingBooking');
+            } catch {
+                // ignore
+            }
+        }
+    }, [setBookingData]);
 
     // Prepare data for API
     const handlePlaceOrder = async () => {
@@ -111,23 +135,23 @@ const CheckoutPage = () => {
 
             console.log('>>> FE payload gửi về:', payload);
             console.log('>>> FE grandTotal', grandTotal);
-            const res = await axios.post(
-                'http://localhost:8080/api/v1/customer/order/create',
-                payload,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            );
+            // const res = await axios.post(
+            //     'http://localhost:8080/api/v1/customer/order/create',
+            //     payload,
+            //     {
+            //         headers: {
+            //             Authorization: `Bearer ${token}`
+            //         }
+            //     }
+            // );
 
-            if (res.data.success) {
-                message.success('Đặt đơn hàng thành công!');
-                // TODO: Reset context và chuyển hướng
-                // clearBooking(); navigate(`/customer/order/${res.data.rentalOrder._id}`);
-            } else {
-                message.error(res.data.message || 'Đặt đơn hàng thất bại');
-            }
+            // if (res.data.success) {
+            //     message.success('Đặt đơn hàng thành công!');
+            //     // TODO: Reset context và chuyển hướng
+            //     // clearBooking(); navigate(`/customer/order/${res.data.rentalOrder._id}`);
+            // } else {
+            //     message.error(res.data.message || 'Đặt đơn hàng thất bại');
+            // }
 
         } catch (error) {
             console.error('Lỗi khi đặt hàng:', error);
@@ -160,10 +184,10 @@ const CheckoutPage = () => {
                         flexDirection: 'column',
                         gap: 32
                     }}>
-                        <CustomerInformation />
+                        <CustomerInformation isLoggedIn={isLoggedIn} bookingData={bookingData} />
                         <OrderDetail />
                         <div style={{ marginTop: 16, textAlign: 'center' }}>
-                            <PlaceOrderButton onClick={handlePlaceOrder} disabled={loading} />
+                            <PlaceOrderButton onClick={handlePlaceOrder} disabled={loading || !isLoggedIn} />
                         </div>
                     </div>
                 </div>

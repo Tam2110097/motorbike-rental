@@ -14,7 +14,13 @@ const DeleteSpecificationPage = () => {
     useEffect(() => {
         const fetchSpec = async () => {
             try {
-                const res = await axios.get(`http://localhost:8080/api/v1/admin/specifications/get-by-id/${id}`);
+                const res = await axios.get(`http://localhost:8080/api/v1/admin/specifications/get-by-id/${id}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('token')}`
+                        }
+                    }
+                );
                 if (res.data.success) {
                     setSpec(res.data.data);
                 }
@@ -29,7 +35,13 @@ const DeleteSpecificationPage = () => {
 
     const handleDelete = async () => {
         try {
-            const res = await axios.delete(`http://localhost:8080/api/v1/admin/specifications/delete/${id}`);
+            const res = await axios.delete(`http://localhost:8080/api/v1/admin/specifications/delete/${id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             if (res.data.success) {
                 message.success('Xóa thông số kỹ thuật thành công');
                 navigate('/admin/specification');
