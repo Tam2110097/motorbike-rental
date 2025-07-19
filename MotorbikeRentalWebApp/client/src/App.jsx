@@ -47,6 +47,7 @@ import OrderReviewPage from './pages/customer/booking/order-review/OrderReviewPa
 import CheckoutPage from './pages/customer/booking/checkout/CheckoutPage'
 import MyOrderPage from './pages/customer/order/MyOrderPage'
 import NotAllowed from './pages/NotAllowed';
+import PaymentPage from './pages/customer/order/PaymentPage'
 
 function App() {
 
@@ -260,6 +261,7 @@ function App() {
               </BookingProvider>
             } />
           <Route path='/order/my-order' element={<MyOrderPage />} />
+          <Route path='/order/my-order/:id' element={<PaymentPage />} />
         </Routes>
       </BrowserRouter >
     </>

@@ -29,10 +29,10 @@ const rentalOrderSchema = new mongoose.Schema({
         enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled'],
         default: 'pending'
     },
-    // evidenceImage: {
-    //     type: String,
-    //     required: [true, 'evidenceImage is required']
-    // },
+    preDepositTotal: {
+        type: Number,
+        default: 0
+    },
     orderCode: {
         type: String,
         unique: true,

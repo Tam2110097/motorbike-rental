@@ -19,6 +19,7 @@ const createRentalOrder = async (req, res) => {
             receiveDate,
             returnDate,
             grandTotal,
+            preDepositTotal,
             motorbikeDetails, // Array of {motorbikeTypeId, quantity, unitPrice}
             accessoryDetails, // Array of {accessoryId, quantity}
             tripContext // Object: {purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures}
@@ -185,6 +186,7 @@ const createRentalOrder = async (req, res) => {
             receiveDate: receiveDateTime,
             returnDate: returnDateTime,
             grandTotal,
+            preDepositTotal,
             motorbikes: selectedMotorbikes
         });
 
@@ -258,7 +260,7 @@ const createRentalOrder = async (req, res) => {
 // Get all rental orders for a customer
 const getCustomerRentalOrders = async (req, res) => {
     try {
-        const { customerId } = req.params;
+        const customerId = req.user.id;
         const { status, page = 1, limit = 10 } = req.query;
 
         // Validate customer exists
@@ -333,6 +335,17 @@ const getRentalOrderById = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Không tìm thấy đơn hàng'
+            });
+        }
+
+        // Only allow the owner to view the order
+        if (
+            rentalOrder.customerId &&
+            (rentalOrder.customerId._id ? rentalOrder.customerId._id.toString() : rentalOrder.customerId.toString()) !== req.user.id
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền xem đơn hàng này.'
             });
         }
 

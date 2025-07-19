@@ -5,12 +5,12 @@ import PlaceOrderButton from './components/PlaceOrderButton'
 import HeaderBar from '../../../../components/HeaderBar'
 import { Layout } from 'antd'
 import { useBooking } from '../../../../context/BookingContext';
-// import axios from 'axios';
+import axios from 'axios';
 import { message } from 'antd';
 import { useState, useEffect } from 'react';
 
 const { Content } = Layout
-// const token = localStorage.getItem('token');
+const token = localStorage.getItem('token');
 
 const pageTitleStyle = {
     textAlign: 'center',
@@ -119,6 +119,12 @@ const CheckoutPage = () => {
                 0
             );
 
+            let preDepositTotal = 0;
+            for (const item of bookingData.motorbikes) {
+                const motorbikeType = item.motorbikeType;
+                preDepositTotal += motorbikeType.preDeposit * item.quantity;
+            }
+
             const grandTotal = Math.round((motorbikeTotal + accessoryTotal) * 100) / 100;
 
             // Payload gửi về server
@@ -128,6 +134,7 @@ const CheckoutPage = () => {
                 receiveDate: startDate.toISOString(),
                 returnDate: endDate.toISOString(),
                 grandTotal,
+                preDepositTotal,
                 motorbikeDetails,
                 accessoryDetails,
                 tripContext: bookingData.tripContext || undefined
@@ -135,23 +142,25 @@ const CheckoutPage = () => {
 
             console.log('>>> FE payload gửi về:', payload);
             console.log('>>> FE grandTotal', grandTotal);
-            // const res = await axios.post(
-            //     'http://localhost:8080/api/v1/customer/order/create',
-            //     payload,
-            //     {
-            //         headers: {
-            //             Authorization: `Bearer ${token}`
-            //         }
-            //     }
-            // );
+            console.log('>>> FE preDepositTotal', preDepositTotal);
+            const res = await axios.post(
+                'http://localhost:8080/api/v1/customer/order/create',
+                payload,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
 
-            // if (res.data.success) {
-            //     message.success('Đặt đơn hàng thành công!');
-            //     // TODO: Reset context và chuyển hướng
-            //     // clearBooking(); navigate(`/customer/order/${res.data.rentalOrder._id}`);
-            // } else {
-            //     message.error(res.data.message || 'Đặt đơn hàng thất bại');
-            // }
+            if (res.data.success) {
+                message.success('Đặt đơn hàng thành công!');
+                setBookingData({ motorbikes: [], motorbikeTypes: [] }); // Reset booking context
+                // TODO: Reset context và chuyển hướng
+                // clearBooking(); navigate(`/customer/order/${res.data.rentalOrder._id}`);
+            } else {
+                message.error(res.data.message || 'Đặt đơn hàng thất bại');
+            }
 
         } catch (error) {
             console.error('Lỗi khi đặt hàng:', error);

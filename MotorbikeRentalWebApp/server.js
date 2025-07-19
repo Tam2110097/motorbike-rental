@@ -27,6 +27,7 @@ app.use("/api/v1/user", require("./routes/userRoutes"));
 app.use("/api/v1/admin", require("./routes/adminRoutes"));
 app.use("/api/v1/employee", require("./routes/employeeRoutes"));
 app.use("/api/v1/customer", require("./routes/customerRoutes"));
+app.use("/api/v1/vnpay", require("./routes/order"));
 
 app.use("/uploads", express.static("uploads")); // Cho phép truy cập ảnh từ trình duyệt
 app.use("/api/v1", uploadRoutes); // Sử dụng route upload
