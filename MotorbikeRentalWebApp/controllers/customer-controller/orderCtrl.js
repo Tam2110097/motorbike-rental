@@ -8,6 +8,7 @@ const accessoryDetailModel = require('../../models/accessoryDetailModels');
 const accessoryModel = require('../../models/accessoryModels');
 const tripContextModel = require('../../models/tripContextModels');
 const mongoose = require('mongoose');
+const paymentModel = require('../../models/paymentModels');
 
 // Create rental order controller
 const createRentalOrder = async (req, res) => {
@@ -20,6 +21,7 @@ const createRentalOrder = async (req, res) => {
             returnDate,
             grandTotal,
             preDepositTotal,
+            depositTotal,
             motorbikeDetails, // Array of {motorbikeTypeId, quantity, unitPrice}
             accessoryDetails, // Array of {accessoryId, quantity}
             tripContext // Object: {purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures}
@@ -177,8 +179,6 @@ const createRentalOrder = async (req, res) => {
             selectedMotorbikes.push(...formatted);
         }
 
-
-
         const newRentalOrder = new rentalOrderModel({
             customerId,
             branchReceive,
@@ -187,11 +187,24 @@ const createRentalOrder = async (req, res) => {
             returnDate: returnDateTime,
             grandTotal,
             preDepositTotal,
+            depositTotal,
             motorbikes: selectedMotorbikes
         });
 
 
         await newRentalOrder.save();
+
+        const newPayment = new paymentModel({
+            paymentType: 'preDeposit',
+            amount: preDepositTotal,
+            paymentMethod: 'bank_transfer',
+            paymentDate: new Date(),
+            transactionCode: newRentalOrder.orderCode,
+            status: 'pending',
+            note: 'Thanh toán tiền đặt cọc',
+            rentalOrderId: newRentalOrder._id
+        });
+        await newPayment.save();
 
         // Tạo tripContext nếu có
         if (tripContext) {
@@ -468,10 +481,24 @@ const cancelRentalOrder = async (req, res) => {
         await rentalOrder.save();
 
         // Update motorbike status back to available
-        const updateMotorbikePromises = rentalOrder.motorbikes.map(motorbikeId => {
-            return motorbikeModel.findByIdAndUpdate(motorbikeId, { status: 'available' });
+        const updateMotorbikePromises = rentalOrder.motorbikes.map(async (motorbikeItem) => {
+            const motorbike = await motorbikeModel.findById(motorbikeItem.motorbikeId);
+
+            if (motorbike) {
+                if (motorbike.booking && motorbike.booking.length > 0) {
+                    return motorbikeModel.findByIdAndUpdate(
+                        motorbike._id,
+                        { status: 'available', booking: [] }
+                    );
+                } else {
+                    return motorbikeModel.findByIdAndUpdate(
+                        motorbike._id,
+                        { status: 'available' }
+                    );
+                }
+            }
         });
-        await Promise.all(updateMotorbikePromises);
+
 
         // Populate references for response
         await rentalOrder.populate([

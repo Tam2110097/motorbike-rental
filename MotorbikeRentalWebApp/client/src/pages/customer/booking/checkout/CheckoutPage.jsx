@@ -8,6 +8,7 @@ import { useBooking } from '../../../../context/BookingContext';
 import axios from 'axios';
 import { message } from 'antd';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const { Content } = Layout
 const token = localStorage.getItem('token');
@@ -32,7 +33,7 @@ const CheckoutPage = () => {
     const { bookingData, setBookingData } = useBooking();
     const [loading, setLoading] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    // const navigate = useNavigate();
+    const navigate = useNavigate();
 
     useEffect(() => {
         // Check login status (adjust according to your auth logic)
@@ -120,9 +121,11 @@ const CheckoutPage = () => {
             );
 
             let preDepositTotal = 0;
+            let depositTotal = 0;
             for (const item of bookingData.motorbikes) {
                 const motorbikeType = item.motorbikeType;
                 preDepositTotal += motorbikeType.preDeposit * item.quantity;
+                depositTotal += motorbikeType.deposit * item.quantity;
             }
 
             const grandTotal = Math.round((motorbikeTotal + accessoryTotal) * 100) / 100;
@@ -135,6 +138,7 @@ const CheckoutPage = () => {
                 returnDate: endDate.toISOString(),
                 grandTotal,
                 preDepositTotal,
+                depositTotal,
                 motorbikeDetails,
                 accessoryDetails,
                 tripContext: bookingData.tripContext || undefined
@@ -143,6 +147,7 @@ const CheckoutPage = () => {
             console.log('>>> FE payload gửi về:', payload);
             console.log('>>> FE grandTotal', grandTotal);
             console.log('>>> FE preDepositTotal', preDepositTotal);
+            console.log('>>> FE depositTotal', depositTotal);
             const res = await axios.post(
                 'http://localhost:8080/api/v1/customer/order/create',
                 payload,
@@ -156,8 +161,7 @@ const CheckoutPage = () => {
             if (res.data.success) {
                 message.success('Đặt đơn hàng thành công!');
                 setBookingData({ motorbikes: [], motorbikeTypes: [] }); // Reset booking context
-                // TODO: Reset context và chuyển hướng
-                // clearBooking(); navigate(`/customer/order/${res.data.rentalOrder._id}`);
+                navigate('/order/my-order');
             } else {
                 message.error(res.data.message || 'Đặt đơn hàng thất bại');
             }

@@ -66,6 +66,14 @@ const rentalOrderSchema = new mongoose.Schema({
         pricePerDay: Number,
         discountedPricePerDay: Number
     }],
+    depositTotal: {
+        type: Number,
+        default: 0
+    },
+    // isPaidFully: {
+    //     type: Boolean,
+    //     default: false
+    // },
     createdAt: {
         type: Date,
         default: Date.now
@@ -97,7 +105,8 @@ rentalOrderSchema.pre('save', async function (next) {
             }
 
             // Generate the new order code with date and sequential number (e.g., ORD20240618-001)
-            this.orderCode = `${todayPrefix}${nextNumber.toString().padStart(3, '0')}`;
+            const timestamp = Date.now(); // ví dụ: 1721399182345
+            this.orderCode = `${todayPrefix}${nextNumber.toString().padStart(3, '0')}-${timestamp}`;
         } catch (error) {
             return next(error);
         }

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const paymentSchema = new mongoose.Schema({
     paymentType: {
         type: String,
-        enum: ['preDeposit', 'deposit', 'rental_fee', 'other'],
+        enum: ['preDeposit', 'remainingPayment', 'other'],
         required: [true, 'paymentType is required']
     },
     amount: {
@@ -40,7 +40,7 @@ const paymentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'rentalOrders',
         required: [true, 'rentalOrderId is required']
-    }
+    },
 }, {
     timestamps: true
 });

@@ -9,7 +9,12 @@ let router = express.Router();
 let $ = require('jquery');
 const request = require('request');
 const moment = require('moment');
+const querystring = require('querystring');
+const config = require('../config/default.json');
+const crypto = require('crypto');
 const rentalOrderModel = require('../models/rentalOrderModels');
+const paymentModel = require('../models/paymentModels');
+const motorbikeModel = require('../models/motorbikeModels');
 
 
 router.get('/', function (req, res, next) {
@@ -78,93 +83,92 @@ router.get('/refund', function (req, res, next) {
 });
 
 
-// router.post('/create_payment_url', function (req, res, next) {
-
-//     process.env.TZ = 'Asia/Ho_Chi_Minh';
-
-//     let date = new Date();
-//     let createDate = moment(date).format('YYYYMMDDHHmmss');
-
-//     let ipAddr = req.headers['x-forwarded-for'] ||
-//         req.connection.remoteAddress ||
-//         req.socket.remoteAddress ||
-//         req.connection.socket.remoteAddress;
-
-//     let config = require('config');
-
-//     let tmnCode = config.get('vnp_TmnCode');
-//     let secretKey = config.get('vnp_HashSecret');
-//     let vnpUrl = config.get('vnp_Url');
-//     let returnUrl = config.get('vnp_ReturnUrl');
-//     let orderId = moment(date).format('DDHHmmss');
-//     let amount = req.body.amount;
-//     let bankCode = req.body.bankCode;
-
-//     let locale = req.body.language;
-//     if(locale === null || locale === ''){
-//         locale = 'vn';
-//     }
-//     let currCode = 'VND';
-//     let vnp_Params = {};
-//     vnp_Params['vnp_Version'] = '2.1.0';
-//     vnp_Params['vnp_Command'] = 'pay';
-//     vnp_Params['vnp_TmnCode'] = tmnCode;
-//     vnp_Params['vnp_Locale'] = locale;
-//     vnp_Params['vnp_CurrCode'] = currCode;
-//     vnp_Params['vnp_TxnRef'] = orderId;
-//     vnp_Params['vnp_OrderInfo'] = 'Thanh toan cho ma GD:' + orderId;
-//     vnp_Params['vnp_OrderType'] = 'other';
-//     vnp_Params['vnp_Amount'] = amount * 100;
-//     vnp_Params['vnp_ReturnUrl'] = returnUrl;
-//     vnp_Params['vnp_IpAddr'] = ipAddr;
-//     vnp_Params['vnp_CreateDate'] = createDate;
-//     if(bankCode !== null && bankCode !== ''){
-//         vnp_Params['vnp_BankCode'] = bankCode;
-//     }
-
-//     vnp_Params = sortObject(vnp_Params);
-
-//     let querystring = require('qs');
-//     let signData = querystring.stringify(vnp_Params, { encode: false });
-//     let crypto = require("crypto");     
-//     let hmac = crypto.createHmac("sha512", secretKey);
-//     let signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex"); 
-//     vnp_Params['vnp_SecureHash'] = signed;
-//     vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
-
-//     res.redirect(vnpUrl)
-// });
-
 router.get('/vnpay_return', async (req, res) => {
-    const vnp_Params = req.query;
+    const vnp_Params = { ...req.query };
     const secureHash = vnp_Params['vnp_SecureHash'];
 
     delete vnp_Params['vnp_SecureHash'];
     delete vnp_Params['vnp_SecureHashType'];
 
-    const sortedParams = sortObject(vnp_Params);
+    const crypto = require('crypto');
     const querystring = require('qs');
-    const crypto = require("crypto");
-    const config = require('config');
-    const secretKey = config.get('vnp_HashSecret');
+    const config = require('../config/default.json');
 
+    const sortedParams = sortObject(vnp_Params);
     const signData = querystring.stringify(sortedParams, { encode: false });
-    const hmac = crypto.createHmac("sha512", secretKey);
+    const hmac = crypto.createHmac("sha512", config.vnp_HashSecret);
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
 
-    if (secureHash === signed) {
-        if (vnp_Params['vnp_ResponseCode'] === '00') {
-            const orderCode = vnp_Params['vnp_TxnRef'];
-            const order = await RentalOrder.findOne({ orderCode });
-            if (order) {
-                order.status = 'paid';
-                await order.save();
-                return res.redirect('http://localhost:3000/payment-success'); // Redirect frontend
-            }
+    const isValid = secureHash === signed;
+    const isSuccess = vnp_Params['vnp_ResponseCode'] === '00';
+
+    const orderCode = vnp_Params['vnp_TxnRef'];
+
+    try {
+        const order = await rentalOrderModel.findOne({ orderCode });
+
+        if (!isValid || !order) {
+            return res.redirect(`http://localhost:5173/order/my-order?orderCode=${orderCode}&vnp_status=failed`);
         }
-        return res.redirect('http://localhost:3000/payment-failed');
-    } else {
-        return res.redirect('http://localhost:3000/payment-failed');
+
+        if (isSuccess) {
+            // Cập nhật đơn hàng
+            order.status = 'confirmed';
+            await order.save();
+
+            // Tìm thanh toán tương ứng và cập nhật
+            const payment = await paymentModel.findOne({
+                rentalOrderId: order._id,
+                paymentType: 'preDeposit',
+                status: 'pending'
+            });
+
+            if (payment) {
+                payment.status = 'completed';
+                payment.transactionCode = vnp_Params['vnp_TransactionNo'];
+                payment.paymentDate = new Date();
+                await payment.save();
+            } else {
+                console.warn('⚠️ Không tìm thấy payment để cập nhật');
+            }
+
+            // Cập nhật booking field cho từng motorbike trong đơn hàng
+            try {
+                for (const motorbikeItem of order.motorbikes) {
+                    const motorbike = await motorbikeModel.findById(motorbikeItem.motorbikeId);
+
+                    if (motorbike) {
+                        // Thêm booking mới vào booking array
+                        const newBooking = {
+                            orderId: order._id,
+                            receiveDate: order.receiveDate,
+                            returnDate: order.returnDate
+                        };
+
+                        // Cập nhật booking array và status
+                        motorbike.booking.push(newBooking);
+                        motorbike.status = 'reserved'; // Giữ status là reserved vì đã thanh toán pre-deposit
+
+                        await motorbike.save();
+                        console.log(`✅ Đã cập nhật booking cho motorbike ${motorbike.code}`);
+                    } else {
+                        console.warn(`⚠️ Không tìm thấy motorbike với ID: ${motorbikeItem.motorbikeId}`);
+                    }
+                }
+            } catch (bookingError) {
+                console.error('❌ Lỗi khi cập nhật booking cho motorbikes:', bookingError);
+            }
+
+            // Redirect về FE
+            return res.redirect(`http://localhost:5173/order/my-order?orderCode=${orderCode}&vnp_status=success`);
+        }
+
+        // Nếu thanh toán thất bại
+        return res.redirect(`http://localhost:5173/order/my-order?orderCode=${orderCode}&vnp_status=failed`);
+        console.log('>>>>>>>>>>>>>>BE: thanh toán failed',)
+    } catch (error) {
+        console.error(error);
+        return res.redirect(`http://localhost:5173/order/my-order?orderCode=${orderCode}&vnp_status=failed`);
     }
 });
 
