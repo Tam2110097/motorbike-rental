@@ -1,6 +1,7 @@
 const express = require('express');
 const authMiddleware = require('../middlewares/authMiddleware');
 const authorizeRoles = require('../middlewares/authorizeRoles');
+const uploadMiddleware = require('../middlewares/uploadMiddleware');
 const {
     createAccessory,
     getAllAccessories,
@@ -22,6 +23,20 @@ const {
     getMotorbikesByBranch,
     updateMotorbikeStatus
 } = require('../controllers/employee-controller/motorbikeCtrl');
+
+const {
+    getAllOrders,
+    getOrderById,
+    getInvoiceData,
+    getAccessoryDetailsForOrder,
+    getFullInvoiceData,
+    markPaidOrder,
+    checkInOrder,
+    checkoutOrder,
+    createRefund,
+    completeRefund,
+    getAllRefunds
+} = require('../controllers/employee-controller/orderManagementCtrl');
 
 // Router object
 const router = express.Router();
@@ -79,5 +94,22 @@ router.get('/motorbike/get-by-branch/:branchId', authMiddleware, authorizeRoles(
 
 // Update motorbike status
 router.patch('/motorbike/update-status/:id', authMiddleware, authorizeRoles('employee'), updateMotorbikeStatus);
+
+/*
+**************EMPLOYEE ROUTE ORDER MANAGEMENT**************
+*/
+router.get('/order/get-all', authMiddleware, authorizeRoles('employee'), getAllOrders);
+router.get('/order/:id', authMiddleware, authorizeRoles('employee'), getOrderById);
+router.get('/order/invoice/:orderId', authMiddleware, authorizeRoles('employee'), getInvoiceData);
+router.get('/order/:orderId/accessories', authMiddleware, authorizeRoles('employee'), getAccessoryDetailsForOrder);
+router.get('/order/full-invoice/:orderId', authMiddleware, authorizeRoles('employee'), getFullInvoiceData);
+router.put('/order/:orderId/mark-paid', authMiddleware, authorizeRoles('employee'), markPaidOrder);
+router.put('/order/:orderId/check-in', authMiddleware, authorizeRoles('employee'), checkInOrder);
+router.put('/order/:orderId/checkout', authMiddleware, authorizeRoles('employee'), checkoutOrder);
+
+// Refund routes
+router.get('/refund/all', authMiddleware, authorizeRoles('employee'), getAllRefunds);
+router.post('/refund/complete/:refundId', authMiddleware, authorizeRoles('employee'), uploadMiddleware.single('invoiceImage'), completeRefund);
+router.post('/refund/create/:orderId', authMiddleware, authorizeRoles('employee'), createRefund);
 
 module.exports = router;

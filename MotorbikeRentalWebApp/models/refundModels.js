@@ -13,7 +13,7 @@ const refundSchema = new mongoose.Schema({
     },
     reason: {
         type: String,
-        required: [true, 'reason is required'],
+        required: [false, 'reason is required'],
         trim: true
     },
     status: {
@@ -29,8 +29,12 @@ const refundSchema = new mongoose.Schema({
     },
     processedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'employees',
+        ref: 'users',
         required: [true, 'processedBy is required']
+    },
+    invoiceImage: {
+        type: String,
+        required: [false, 'invoiceImage is required']
     }
 }, {
     timestamps: true

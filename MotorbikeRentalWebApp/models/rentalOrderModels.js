@@ -22,7 +22,7 @@ const rentalOrderSchema = new mongoose.Schema({
     },
     returnDate: {
         type: Date,
-        required: [true, 'returnDate is required']
+        required: [false, 'returnDate is required']
     },
     status: {
         type: String,
@@ -70,10 +70,18 @@ const rentalOrderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    // isPaidFully: {
-    //     type: Boolean,
-    //     default: false
-    // },
+    isPaidFully: {
+        type: Boolean,
+        default: false
+    },
+    checkInDate: {
+        type: Date,
+        default: null
+    },
+    checkOutDate: {
+        type: Date,
+        default: null
+    },
     createdAt: {
         type: Date,
         default: Date.now

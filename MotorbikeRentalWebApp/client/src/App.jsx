@@ -48,6 +48,9 @@ import CheckoutPage from './pages/customer/booking/checkout/CheckoutPage'
 import MyOrderPage from './pages/customer/order/MyOrderPage'
 import NotAllowed from './pages/NotAllowed';
 import PaymentPage from './pages/customer/order/PaymentPage'
+import OrderPage from './pages/employee/order/OrderPage'
+import InvoicePage from './pages/employee/order/InvoicePage'
+import RefundPage from './pages/employee/order/RefundPage'
 
 function App() {
 
@@ -228,6 +231,22 @@ function App() {
           <Route path='/employee/motorbike/delete/:id' element={
             <ProtectedRoute allowedRoles={["employee"]}>
               <DeleteMotorbikePage />
+            </ProtectedRoute>
+          } />
+          {/* ====employee-order==== */}
+          <Route path='/employee/order' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <OrderPage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/order/invoice/:orderId' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <InvoicePage />
+            </ProtectedRoute>
+          } />
+          <Route path='/employee/refund' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <RefundPage />
             </ProtectedRoute>
           } />
           {/* ====customer==== */}

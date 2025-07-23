@@ -27,9 +27,14 @@ export const employeeMenu = [
         label: "Xe đang được thuê",
     },
     {
-        path: "/employee/status-order",
+        path: "/employee/order",
         icon: NotificationOutlined,
-        label: "Trạng thái đơn hàng",
+        label: "Quản lý đơn hàng",
+    },
+    {
+        path: "/employee/refund",
+        icon: NotificationOutlined,
+        label: "Quản lý hoàn tiền",
     },
 ]
 
