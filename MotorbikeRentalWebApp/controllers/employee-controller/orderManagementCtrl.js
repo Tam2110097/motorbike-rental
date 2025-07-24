@@ -8,6 +8,7 @@ const motorbikeModel = require('../../models/motorbikeModels');
 const refundModel = require('../../models/refundModels');
 const paymentModel = require('../../models/paymentModels');
 const dayjs = require('dayjs');
+const cron = require('node-cron');
 
 // Get all rental orders (for employees)
 const getAllOrders = async (req, res) => {
@@ -208,20 +209,26 @@ const checkoutOrder = async (req, res) => {
                 });
             }));
         }
-        // --- Refund logic for early checkout ---
-        const plannedReturn = new Date(order.returnDate);
-        const actualCheckout = order.checkOutDate;
-        let remainingDays = Math.floor((plannedReturn - actualCheckout) / (1000 * 60 * 60 * 24));
-        if (remainingDays >= 1) {
-            // Calculate refund amount
+        // --- Refactored Refund logic for early checkout ---
+        const plannedReturn = dayjs(order.returnDate);
+        const actualCheckout = dayjs(order.checkOutDate);
+        const receiveDate = dayjs(order.receiveDate);
+        if (actualCheckout.isBefore(plannedReturn, 'day')) {
+            // Calculate refund amount based on unused days and damage waiver
+            const usedDays = actualCheckout.diff(receiveDate, 'day');
+            const plannedDays = plannedReturn.diff(receiveDate, 'day');
+            const refundDays = plannedDays - usedDays;
             let amount = 0;
-            for (const mb of order.motorbikes) {
-                const price = mb.pricePerDay || mb.discountedPricePerDay || (mb.motorbikeTypeId && mb.motorbikeTypeId.price) || 0;
-                amount += price * mb.quantity * remainingDays;
+            // Get motorbike details for this order
+            const motorbikeDetails = await rentalOrderMotorbikeDetailModel.find({ rentalOrderId: orderId });
+            for (const mb of motorbikeDetails) {
+                const unitPrice = mb.unitPrice || 0;
+                const waiver = mb.damageWaiverFee || 0;
+                amount += (unitPrice + waiver) * mb.quantity * refundDays;
             }
             // Find payment for this order
             const payment = await paymentModel.findOne({ rentalOrderId: orderId });
-            if (payment) {
+            if (payment && amount > 0) {
                 await refundModel.create({
                     amount,
                     reason: 'Trả xe sớm',
@@ -320,11 +327,15 @@ const createRefund = async (req, res) => {
 const completeRefund = async (req, res) => {
     try {
         const { refundId } = req.params;
+        const userId = req.user.id;
         if (!req.file) return res.status(400).json({ success: false, message: 'Vui lòng tải lên ảnh chuyển khoản' });
         const refund = await refundModel.findById(refundId);
         if (!refund) return res.status(404).json({ success: false, message: 'Không tìm thấy hoàn tiền' });
         refund.status = 'completed';
         refund.invoiceImage = `/uploads/${req.file.filename}`;
+        if (!refund.processedBy) {
+            refund.processedBy = userId;
+        }
         await refund.save();
         res.status(200).json({ success: true, invoiceImage: refund.invoiceImage });
     } catch (error) {
@@ -341,6 +352,34 @@ const getAllRefunds = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// CRONJOB: Auto-cancel pending orders older than 6 hours
+// cron.schedule('*/10 * * * *', async () => {
+//     try {
+//         const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+//         const pendingOrders = await rentalOrderModel.find({ status: 'pending', createdAt: { $lte: sixHoursAgo } });
+//         for (const order of pendingOrders) {
+//             order.status = 'cancelled';
+//             await order.save();
+//             // Update motorbikes to available
+//             if (order.motorbikes && order.motorbikes.length > 0) {
+//                 await Promise.all(order.motorbikes.map(async (mb) => {
+//                     const motorbike = await motorbikeModel.findById(mb.motorbikeId);
+//                     if (motorbike) {
+//                         if (motorbike.booking && motorbike.booking.length > 0) {
+//                             await motorbikeModel.findByIdAndUpdate(motorbike._id, { status: 'available', booking: [] });
+//                         } else {
+//                             await motorbikeModel.findByIdAndUpdate(motorbike._id, { status: 'available' });
+//                         }
+//                     }
+//                 }));
+//             }
+//             console.log(`[CRON] Auto-cancelled order ${order._id} (pending > 6h)`);
+//         }
+//     } catch (err) {
+//         console.error('[CRON] Error auto-cancelling pending orders:', err);
+//     }
+// });
 
 module.exports = {
     getAllOrders,

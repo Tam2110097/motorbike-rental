@@ -30,7 +30,7 @@ const refundSchema = new mongoose.Schema({
     processedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'users',
-        required: [true, 'processedBy is required']
+        required: [false, 'processedBy is required']
     },
     invoiceImage: {
         type: String,

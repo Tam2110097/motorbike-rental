@@ -15,7 +15,9 @@ const {
     getRentalOrderById,
     updateRentalOrderStatus,
     cancelRentalOrder,
-    getCustomerOrderStatistics
+    getCustomerOrderStatistics,
+    createOrderFeedback,
+    getOrderFeedback
 } = require('../controllers/customer-controller/orderCtrl');
 
 //router onject
@@ -46,5 +48,9 @@ router.put('/order/:id/status', updateRentalOrderStatus);
 router.put('/order/:id/cancel', cancelRentalOrder);
 // Get customer order statistics
 router.get('/order/customer/:customerId/statistics', getCustomerOrderStatistics);
+// Add feedback route
+router.post('/order/:orderId/feedback', authMiddleware, createOrderFeedback);
+// Add get feedback route
+router.get('/order/:orderId/feedback', authMiddleware, getOrderFeedback);
 
 module.exports = router;

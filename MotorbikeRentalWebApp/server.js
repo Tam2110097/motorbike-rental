@@ -6,6 +6,9 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const uploadRoutes = require("./routes/uploadRoutes");
 
+//cron job
+require('./jobs/autoCancelOrders');
+
 //dotenv config
 require("dotenv").config();
 

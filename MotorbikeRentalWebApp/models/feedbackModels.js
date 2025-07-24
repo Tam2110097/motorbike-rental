@@ -18,7 +18,11 @@ const feedbackSchema = new mongoose.Schema({
     },
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'customers'
+        ref: 'users'
+    },
+    isPublic: {
+        type: Boolean,
+        default: false
     },
     rentalOrderId: {
         type: mongoose.Schema.Types.ObjectId,

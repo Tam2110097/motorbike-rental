@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Spin, Tag, Typography, Card, message, Modal, Button } from 'antd';
+import { Table, Spin, Tag, Typography, Card, message, Modal, Button, Dropdown, Menu } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate, useLocation } from 'react-router-dom';
 import queryString from 'query-string';
+import { Table as AntTable } from 'antd';
 
 const { Title } = Typography;
 
@@ -11,7 +12,11 @@ const MyOrderPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
-    const [selectedOrder, setSelectedOrder] = useState(null);
+    // Removed unused selectedOrder state
+    const [orderDetail, setOrderDetail] = useState(null);
+    const [motorbikeDetails, setMotorbikeDetails] = useState([]);
+    const [accessoryDetails, setAccessoryDetails] = useState([]);
+    const [feedbacks, setFeedbacks] = useState({}); // { [orderId]: feedback }
     const navigate = useNavigate();
     const location = useLocation();
     const searchParams = queryString.parse(location.search);
@@ -54,6 +59,23 @@ const MyOrderPage = () => {
                 const data = await res.json();
                 if (data.success) {
                     setOrders(data.rentalOrders || []);
+                    // Fetch feedbacks for completed orders
+                    const completedOrders = (data.rentalOrders || []).filter(o => o.status === 'completed');
+                    const feedbackResults = {};
+                    await Promise.all(completedOrders.map(async (order) => {
+                        try {
+                            const resFb = await fetch(`http://localhost:8080/api/v1/customer/order/${order._id}/feedback`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (resFb.ok) {
+                                const fbData = await resFb.json();
+                                if (fbData.success && fbData.feedback) {
+                                    feedbackResults[order._id] = fbData.feedback;
+                                }
+                            }
+                        } catch { /* ignore feedback fetch error */ }
+                    }));
+                    setFeedbacks(feedbackResults);
                 } else {
                     setError(data.message || 'Không thể lấy danh sách đơn hàng.');
                 }
@@ -176,13 +198,51 @@ const MyOrderPage = () => {
                     <Button
                         key="details"
                         type="primary"
-                        style={{ minWidth: 120 }}
-                        onClick={() => { setSelectedOrder(record); setModalVisible(true); }}
+                        style={{ minWidth: 120, marginBottom: record.status === 'completed' ? 8 : 0 }}
+                        onClick={() => handleShowDetail(record)}
                         block
                     >
                         Xem chi tiết
                     </Button>
                 );
+                // Add Đánh giá button or feedback dropdown for completed orders
+                if (record.status === 'completed') {
+                    if (feedbacks[record._id]) {
+                        // Show dropdown with rating and comment
+                        const fb = feedbacks[record._id];
+                        actions.push(
+                            <Dropdown
+                                key="rated"
+                                overlay={
+                                    <Menu>
+                                        <Menu.Item key="score">
+                                            <span><b>Điểm hài lòng:</b> <span style={{ color: '#faad14' }}>{'★'.repeat(fb.satisfactionScore)}{'☆'.repeat(5 - fb.satisfactionScore)}</span></span>
+                                        </Menu.Item>
+                                        <Menu.Item key="comment">
+                                            <span><b>Nhận xét:</b> {fb.comment}</span>
+                                        </Menu.Item>
+                                    </Menu>
+                                }
+                                placement="bottom"
+                            >
+                                <Button style={{ background: '#f6ffed', color: '#52c41a', border: '1px solid #b7eb8f', borderRadius: 6, minWidth: 120 }} block>
+                                    Đã đánh giá
+                                </Button>
+                            </Dropdown>
+                        );
+                    } else {
+                        actions.push(
+                            <Button
+                                key="rate"
+                                style={{ background: 'linear-gradient(135deg, #fadb14 0%, #fa8c16 100%)', color: '#333', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 600, minWidth: 120 }}
+                                onClick={() => navigate(`/order/rate/${record._id}`)}
+                                block
+                            >
+                                Đánh giá
+                            </Button>
+                        );
+                    }
+                }
                 return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>{actions}</div>;
             }
         },
@@ -195,6 +255,34 @@ const MyOrderPage = () => {
     //     message.info(`Chọn phương thức thanh toán cho đơn ${order.orderCode}`);
     //     // Example: navigate(`/order/payment-method/${order._id}`);
     // };
+
+    const handleShowDetail = async (record) => {
+        setModalVisible(true);
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`http://localhost:8080/api/v1/customer/order/${record._id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            const data = await res.json();
+            if (data.success && data.rentalOrder) {
+                setOrderDetail(data.rentalOrder);
+                setMotorbikeDetails(data.motorbikeDetails || []);
+                setAccessoryDetails(data.accessoryDetails || []);
+            } else {
+                setOrderDetail(record);
+                setMotorbikeDetails([]);
+                setAccessoryDetails([]);
+            }
+        } catch {
+            setOrderDetail(record);
+            setMotorbikeDetails([]);
+            setAccessoryDetails([]);
+        }
+    };
 
     return (
         <>
@@ -227,32 +315,94 @@ const MyOrderPage = () => {
                 <Modal
                     title="Chi tiết đơn hàng"
                     visible={modalVisible}
-                    onCancel={() => setModalVisible(false)}
+                    onCancel={() => { setModalVisible(false); setOrderDetail(null); }}
                     footer={null}
                 >
-                    {selectedOrder && (
+                    {orderDetail && (
                         <div style={{ lineHeight: 2 }}>
-                            <div><b>Mã đơn:</b> {selectedOrder.orderCode}</div>
+                            <div><b>Mã đơn:</b> {orderDetail.orderCode}</div>
                             <div><b>Trạng thái:</b> <Tag color={
-                                selectedOrder.status === 'pending' ? 'orange' :
-                                    selectedOrder.status === 'confirmed' ? 'blue' :
-                                        selectedOrder.status === 'active' ? 'green' :
-                                            selectedOrder.status === 'completed' ? 'purple' :
-                                                selectedOrder.status === 'cancelled' ? 'red' : 'default'
+                                orderDetail.status === 'pending' ? 'orange' :
+                                    orderDetail.status === 'confirmed' ? 'blue' :
+                                        orderDetail.status === 'active' ? 'green' :
+                                            orderDetail.status === 'completed' ? 'purple' :
+                                                orderDetail.status === 'cancelled' ? 'red' : 'default'
                             }>{
-                                    selectedOrder.status === 'pending' ? 'Chờ thanh toán' :
-                                        selectedOrder.status === 'confirmed' ? 'Đã xác nhận' :
-                                            selectedOrder.status === 'active' ? 'Đang sử dụng' :
-                                                selectedOrder.status === 'completed' ? 'Đã hoàn thành' :
-                                                    selectedOrder.status === 'cancelled' ? 'Đã hủy' : selectedOrder.status
+                                    orderDetail.status === 'pending' ? 'Chờ thanh toán' :
+                                        orderDetail.status === 'confirmed' ? 'Đã xác nhận' :
+                                            orderDetail.status === 'active' ? 'Đang sử dụng' :
+                                                orderDetail.status === 'completed' ? 'Đã hoàn thành' :
+                                                    orderDetail.status === 'cancelled' ? 'Đã hủy' : orderDetail.status
                                 }</Tag></div>
-                            <div><b>Nhận xe:</b> {selectedOrder.branchReceive?.city || 'N/A'}</div>
-                            <div><b>Trả xe:</b> {selectedOrder.branchReturn?.city || 'N/A'}</div>
-                            <div><b>Ngày nhận:</b> {dayjs(selectedOrder.receiveDate).format('DD/MM/YYYY HH:mm')}</div>
-                            <div><b>Ngày trả:</b> {dayjs(selectedOrder.returnDate).format('DD/MM/YYYY HH:mm')}</div>
-                            <div><b>Tổng tiền:</b> {selectedOrder.grandTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
-                            <div><b>Đặt cọc trước:</b> {selectedOrder.preDepositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
-                            <div><b>Đặt cọc khi nhận xe:</b> {selectedOrder.depositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
+                            <div><b>Nhận xe:</b> {orderDetail.branchReceive?.city || 'N/A'}</div>
+                            <div><b>Trả xe:</b> {orderDetail.branchReturn?.city || 'N/A'}</div>
+                            <div><b>Ngày nhận:</b> {dayjs(orderDetail.receiveDate).format('DD/MM/YYYY HH:mm')}</div>
+                            <div><b>Ngày trả:</b> {dayjs(orderDetail.returnDate).format('DD/MM/YYYY HH:mm')}</div>
+                            <div><b>Tổng tiền:</b> {orderDetail.grandTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
+                            <div><b>Đặt cọc trước:</b> {orderDetail.preDepositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
+                            <div><b>Đặt cọc khi nhận xe:</b> {orderDetail.depositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
+                            {/* Motorbikes table */}
+                            {motorbikeDetails && motorbikeDetails.length > 0 && (
+                                <div style={{ marginTop: 16 }}>
+                                    <b>Danh sách xe:</b>
+                                    <AntTable
+                                        columns={[
+                                            { title: 'Tên xe', dataIndex: ['motorbikeTypeId', 'name'], key: 'type', render: (_, r) => r.motorbikeTypeId?.name || '-' },
+                                            { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity' },
+                                            { title: 'Đơn giá', dataIndex: 'unitPrice', key: 'unitPrice', render: v => v?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) },
+                                            { title: 'Miễn trừ thiệt hại', dataIndex: 'damageWaiverFee', key: 'damageWaiverFee', render: v => v ? v.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '-' },
+                                            {
+                                                title: 'Tổng cộng',
+                                                key: 'total',
+                                                render: (_, r) => {
+                                                    if (!r.unitPrice || !r.quantity) return '-';
+                                                    let duration;
+                                                    let startTime, endTime;
+                                                    if (orderDetail.startTime && orderDetail.endTime) {
+                                                        startTime = dayjs(`${orderDetail.receiveDate}T${orderDetail.startTime}`);
+                                                        endTime = dayjs(`${orderDetail.returnDate}T${orderDetail.endTime}`);
+                                                    } else {
+                                                        startTime = dayjs(orderDetail.receiveDate);
+                                                        endTime = dayjs(orderDetail.returnDate);
+                                                    }
+                                                    if (startTime.isValid() && endTime.isValid()) {
+                                                        duration = endTime.diff(startTime, 'day') + 1;
+                                                    } else {
+                                                        duration = 1;
+                                                    }
+                                                    const totalPerDay = r.unitPrice + (r.damageWaiverFee || 0);
+                                                    const total = totalPerDay * r.quantity * duration;
+                                                    return total.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+                                                }
+                                            }
+                                        ]}
+                                        dataSource={motorbikeDetails}
+                                        rowKey={(_, idx) => idx}
+                                        pagination={false}
+                                        size="small"
+                                        style={{ marginTop: 8, marginBottom: 8 }}
+                                    />
+                                </div>
+                            )}
+                            {/* Accessories table */}
+                            {accessoryDetails && accessoryDetails.length > 0 && (
+                                <div style={{ marginTop: 16 }}>
+                                    <b>Phụ kiện thuê thêm:</b>
+                                    <AntTable
+                                        columns={[
+                                            { title: 'Tên phụ kiện', dataIndex: ['accessoryId', 'name'], key: 'name', render: (_, r) => r.accessoryId?.name || '-' },
+                                            { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity' },
+                                            { title: 'Đơn giá', dataIndex: ['accessoryId', 'price'], key: 'price', render: (_, r) => r.accessoryId?.price?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) || '-' },
+                                            { title: 'Tổng', key: 'total', render: (_, r) => (r.accessoryId?.price && r.quantity) ? (r.accessoryId.price * r.quantity).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '-' }
+                                        ]}
+                                        dataSource={accessoryDetails}
+                                        rowKey={(_, idx) => idx}
+                                        pagination={false}
+                                        size="small"
+                                        style={{ marginTop: 8, marginBottom: 8 }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
                 </Modal>

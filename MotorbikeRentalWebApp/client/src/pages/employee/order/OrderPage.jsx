@@ -3,6 +3,7 @@ import { Table, Card, Button, Tag, message, Spin, Row, Col, Modal, Tabs } from '
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { Table as AntTable } from 'antd';
 
 const statusMap = {
     pending: { label: 'Chờ thanh toán', color: 'orange' },
@@ -48,6 +49,25 @@ const OrderPage = () => {
     const [orderDetail, setOrderDetail] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
     const [refundModal, setRefundModal] = useState({ visible: false, amount: 0 });
+    const [motorbikeDetails, setMotorbikeDetails] = useState([]);
+    const [accessoryDetails, setAccessoryDetails] = useState([]);
+
+    // Pagination state for each status
+    const [pagination, setPagination] = useState(() => {
+        const obj = {};
+        statusOrder.forEach(status => {
+            obj[status] = { current: 1, pageSize: 5 };
+        });
+        return obj;
+    });
+
+    // Handler for pagination change
+    const handleTableChange = (status, page, pageSize) => {
+        setPagination(prev => ({
+            ...prev,
+            [status]: { current: page, pageSize }
+        }));
+    };
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -159,9 +179,10 @@ const OrderPage = () => {
                                         message.error('Lỗi khi check-in.');
                                     }
                                 }}
-                                disabled={!isPaid}
+                                disabled={!isPaid || !dayjs().isSame(dayjs(record.receiveDate), 'day')}
                                 style={{ minWidth: 120 }}
                                 block
+                                title={!dayjs().isSame(dayjs(record.receiveDate), 'day') ? 'Chỉ có thể check-in vào ngày nhận xe' : undefined}
                             >
                                 Check-in
                             </Button>
@@ -187,10 +208,19 @@ const OrderPage = () => {
                                             headers: { Authorization: `Bearer ${token}` }
                                         });
                                         const data = await res.json();
-                                        if (data.success) setOrderDetail(data.invoice);
-                                        else setOrderDetail(null);
+                                        if (data.success) {
+                                            setOrderDetail(data.invoice);
+                                            setMotorbikeDetails(data.invoice.motorbikeDetails || []);
+                                            setAccessoryDetails(data.invoice.accessories || []);
+                                        } else {
+                                            setOrderDetail(null);
+                                            setMotorbikeDetails([]);
+                                            setAccessoryDetails([]);
+                                        }
                                     } catch {
                                         setOrderDetail(null);
+                                        setMotorbikeDetails([]);
+                                        setAccessoryDetails([]);
                                     } finally {
                                         setDetailLoading(false);
                                     }
@@ -229,7 +259,12 @@ const OrderPage = () => {
                                                 const checkOutDate = new Date(orderData.rentalOrder.checkOutDate);
                                                 const returnDate = new Date(orderData.rentalOrder.returnDate);
                                                 if (checkOutDate < returnDate) {
-                                                    // Fetch refund info
+                                                    // 1. Create refund if early return
+                                                    await fetch(`http://localhost:8080/api/v1/employee/refund/create/${record._id}`, {
+                                                        method: 'POST',
+                                                        headers: { Authorization: `Bearer ${token}` }
+                                                    });
+                                                    // 2. Fetch refund info
                                                     const refundRes = await fetch('http://localhost:8080/api/v1/employee/refund/all', {
                                                         headers: { Authorization: `Bearer ${token}` }
                                                     });
@@ -276,10 +311,19 @@ const OrderPage = () => {
                                             headers: { Authorization: `Bearer ${token}` }
                                         });
                                         const data = await res.json();
-                                        if (data.success) setOrderDetail(data.invoice);
-                                        else setOrderDetail(null);
+                                        if (data.success) {
+                                            setOrderDetail(data.invoice);
+                                            setMotorbikeDetails(data.invoice.motorbikeDetails || []);
+                                            setAccessoryDetails(data.invoice.accessories || []);
+                                        } else {
+                                            setOrderDetail(null);
+                                            setMotorbikeDetails([]);
+                                            setAccessoryDetails([]);
+                                        }
                                     } catch {
                                         setOrderDetail(null);
+                                        setMotorbikeDetails([]);
+                                        setAccessoryDetails([]);
                                     } finally {
                                         setDetailLoading(false);
                                     }
@@ -316,10 +360,19 @@ const OrderPage = () => {
                                         headers: { Authorization: `Bearer ${token}` }
                                     });
                                     const data = await res.json();
-                                    if (data.success) setOrderDetail(data.invoice);
-                                    else setOrderDetail(null);
+                                    if (data.success) {
+                                        setOrderDetail(data.invoice);
+                                        setMotorbikeDetails(data.invoice.motorbikeDetails || []);
+                                        setAccessoryDetails(data.invoice.accessories || []);
+                                    } else {
+                                        setOrderDetail(null);
+                                        setMotorbikeDetails([]);
+                                        setAccessoryDetails([]);
+                                    }
                                 } catch {
                                     setOrderDetail(null);
+                                    setMotorbikeDetails([]);
+                                    setAccessoryDetails([]);
                                 } finally {
                                     setDetailLoading(false);
                                 }
@@ -368,9 +421,19 @@ const OrderPage = () => {
                             <h2 style={{ color: statusMap[status].color }}>{statusMap[status].label}</h2>
                             <Table
                                 columns={columns}
-                                dataSource={grouped[status]}
+                                dataSource={grouped[status].slice(
+                                    (pagination[status].current - 1) * pagination[status].pageSize,
+                                    pagination[status].current * pagination[status].pageSize
+                                )}
                                 rowKey="_id"
-                                pagination={false}
+                                pagination={{
+                                    current: pagination[status].current,
+                                    pageSize: pagination[status].pageSize,
+                                    total: grouped[status].length,
+                                    showSizeChanger: true,
+                                    onChange: (page, pageSize) => handleTableChange(status, page, pageSize),
+                                    showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total} đơn`
+                                }}
                                 bordered
                             />
                         </div>
@@ -378,9 +441,19 @@ const OrderPage = () => {
                 ) : (
                     <Table
                         columns={columns}
-                        dataSource={grouped[activeTab]}
+                        dataSource={grouped[activeTab].slice(
+                            (pagination[activeTab].current - 1) * pagination[activeTab].pageSize,
+                            pagination[activeTab].current * pagination[activeTab].pageSize
+                        )}
                         rowKey="_id"
-                        pagination={false}
+                        pagination={{
+                            current: pagination[activeTab].current,
+                            pageSize: pagination[activeTab].pageSize,
+                            total: grouped[activeTab].length,
+                            showSizeChanger: true,
+                            onChange: (page, pageSize) => handleTableChange(activeTab, page, pageSize),
+                            showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total} đơn`
+                        }}
                         bordered
                     />
                 )
@@ -403,32 +476,59 @@ const OrderPage = () => {
                         <div><b>Tổng tiền:</b> {orderDetail.grandTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
                         <div><b>Đặt cọc trước:</b> {orderDetail.preDepositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
                         <div><b>Đặt cọc khi nhận xe:</b> {orderDetail.depositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
-                        <div style={{ marginTop: 16 }}>
-                            <b>Danh sách xe:</b>
-                            <Table
-                                columns={[
-                                    { title: 'Tên xe', dataIndex: ['motorbikeTypeId', 'name'], key: 'type', render: (_, r) => r.motorbikeTypeId?.name || '-' },
-                                    { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity' },
-                                    { title: 'Biển số', dataIndex: ['motorbikeId', 'code'], key: 'code', render: (_, r) => r.motorbikeId?.code || '-' }
-                                ]}
-                                dataSource={orderDetail.motorbikes || []}
-                                rowKey={(_, idx) => idx}
-                                pagination={false}
-                                size="small"
-                                style={{ marginTop: 8, marginBottom: 8 }}
-                            />
-                        </div>
-                        {orderDetail.accessories && orderDetail.accessories.length > 0 && (
+                        {/* Motorbikes table */}
+                        {motorbikeDetails && motorbikeDetails.length > 0 && (
+                            <div style={{ marginTop: 16 }}>
+                                <b>Danh sách xe:</b>
+                                <AntTable
+                                    columns={[
+                                        { title: 'Tên xe', dataIndex: ['motorbikeTypeId', 'name'], key: 'type', render: (_, r) => r.motorbikeTypeId?.name || '-' },
+                                        { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity' },
+                                        { title: 'Đơn giá', dataIndex: 'unitPrice', key: 'unitPrice', render: v => v?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) },
+                                        { title: 'Miễn trừ thiệt hại', dataIndex: 'damageWaiverFee', key: 'damageWaiverFee', render: v => v ? v.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '-' },
+                                        {
+                                            title: 'Tổng cộng', key: 'total', render: (_, r) => {
+                                                let duration;
+                                                let startTime, endTime;
+                                                if (orderDetail.startTime && orderDetail.endTime) {
+                                                    startTime = dayjs(`${orderDetail.receiveDate}T${orderDetail.startTime}`);
+                                                    endTime = dayjs(`${orderDetail.returnDate}T${orderDetail.endTime}`);
+                                                } else {
+                                                    startTime = dayjs(orderDetail.receiveDate);
+                                                    endTime = dayjs(orderDetail.returnDate);
+                                                }
+                                                if (startTime.isValid() && endTime.isValid()) {
+                                                    duration = endTime.diff(startTime, 'day') + 1;
+                                                } else {
+                                                    duration = 1;
+                                                }
+                                                if (!r.unitPrice || !r.quantity) return '-';
+                                                const totalPerDay = r.unitPrice + (r.damageWaiverFee || 0);
+                                                const total = totalPerDay * r.quantity * duration;
+                                                return total.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+                                            }
+                                        }
+                                    ]}
+                                    dataSource={motorbikeDetails}
+                                    rowKey={(_, idx) => idx}
+                                    pagination={false}
+                                    size="small"
+                                    style={{ marginTop: 8, marginBottom: 8 }}
+                                />
+                            </div>
+                        )}
+                        {/* Accessories table */}
+                        {accessoryDetails && accessoryDetails.length > 0 && (
                             <div style={{ marginTop: 16 }}>
                                 <b>Phụ kiện thuê thêm:</b>
-                                <Table
+                                <AntTable
                                     columns={[
                                         { title: 'Tên phụ kiện', dataIndex: ['accessory', 'name'], key: 'name', render: (_, r) => r.accessory?.name || '-' },
                                         { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity' },
                                         { title: 'Đơn giá', dataIndex: ['accessory', 'price'], key: 'price', render: (_, r) => r.accessory?.price?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) || '-' },
                                         { title: 'Tổng', key: 'total', render: (_, r) => (r.accessory?.price && r.quantity) ? (r.accessory.price * r.quantity).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '-' }
                                     ]}
-                                    dataSource={orderDetail.accessories}
+                                    dataSource={accessoryDetails}
                                     rowKey={(_, idx) => idx}
                                     pagination={false}
                                     size="small"

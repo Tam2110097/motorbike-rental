@@ -51,6 +51,7 @@ import PaymentPage from './pages/customer/order/PaymentPage'
 import OrderPage from './pages/employee/order/OrderPage'
 import InvoicePage from './pages/employee/order/InvoicePage'
 import RefundPage from './pages/employee/order/RefundPage'
+import RateOrderPage from './pages/customer/order/RateOrderPage'
 
 function App() {
 
@@ -281,6 +282,7 @@ function App() {
             } />
           <Route path='/order/my-order' element={<MyOrderPage />} />
           <Route path='/order/my-order/:id' element={<PaymentPage />} />
+          <Route path='/order/rate/:id' element={<RateOrderPage />} />
         </Routes>
       </BrowserRouter >
     </>

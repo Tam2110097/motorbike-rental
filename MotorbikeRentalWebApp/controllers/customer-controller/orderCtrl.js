@@ -9,6 +9,8 @@ const accessoryModel = require('../../models/accessoryModels');
 const tripContextModel = require('../../models/tripContextModels');
 const mongoose = require('mongoose');
 const paymentModel = require('../../models/paymentModels');
+const refundModel = require('../../models/refundModels');
+const feedbackModel = require('../../models/feedbackModels');
 
 // Create rental order controller
 const createRentalOrder = async (req, res) => {
@@ -365,13 +367,25 @@ const getRentalOrderById = async (req, res) => {
         // Get motorbike details
         const motorbikeDetails = await rentalOrderMotorbikeDetailModel.find({
             rentalOrderId: id
-        }).populate('motorbikeTypeId');
+        }).populate({
+            path: 'motorbikeTypeId',
+            select: 'name price' // add more fields if needed
+        });
+
+        // Get accessory details
+        const accessoryDetails = await accessoryDetailModel.find({
+            rentalOrderId: id
+        }).populate({
+            path: 'accessoryId',
+            select: 'name price' // add more fields if needed
+        });
 
         res.status(200).json({
             success: true,
             message: 'Lấy thông tin đơn hàng thành công',
             rentalOrder,
-            motorbikeDetails
+            motorbikeDetails,
+            accessoryDetails
         });
 
     } catch (error) {
@@ -458,7 +472,7 @@ const cancelRentalOrder = async (req, res) => {
     try {
         const { id } = req.params;
         const { reason } = req.body;
-
+        // const userId = req.user.id;
         // Check if rental order exists
         const rentalOrder = await rentalOrderModel.findById(id);
         if (!rentalOrder) {
@@ -467,7 +481,6 @@ const cancelRentalOrder = async (req, res) => {
                 message: 'Không tìm thấy đơn hàng'
             });
         }
-
         // Check if order can be cancelled
         if (rentalOrder.status === 'completed' || rentalOrder.status === 'cancelled') {
             return res.status(400).json({
@@ -475,15 +488,30 @@ const cancelRentalOrder = async (req, res) => {
                 message: 'Không thể hủy đơn hàng đã hoàn thành hoặc đã hủy'
             });
         }
-
+        // If cancellation is at least 8 hours before receiveDate, create refund
+        const now = new Date();
+        const receiveDate = new Date(rentalOrder.receiveDate);
+        const hoursDiff = (receiveDate - now) / (1000 * 60 * 60);
+        if (hoursDiff >= 8) {
+            // Find payment for this order
+            const payment = await paymentModel.findOne({ rentalOrderId: id });
+            if (payment) {
+                await refundModel.create({
+                    amount: rentalOrder.preDepositTotal,
+                    reason: 'Hủy đơn trước 8 tiếng',
+                    status: 'pending',
+                    paymentId: payment._id,
+                    processedBy: '',
+                    invoiceImage: ''
+                });
+            }
+        }
         // Update status to cancelled
         rentalOrder.status = 'cancelled';
         await rentalOrder.save();
-
         // Update motorbike status back to available
         const updateMotorbikePromises = rentalOrder.motorbikes.map(async (motorbikeItem) => {
             const motorbike = await motorbikeModel.findById(motorbikeItem.motorbikeId);
-
             if (motorbike) {
                 if (motorbike.booking && motorbike.booking.length > 0) {
                     return motorbikeModel.findByIdAndUpdate(
@@ -498,8 +526,18 @@ const cancelRentalOrder = async (req, res) => {
                 }
             }
         });
-
-
+        // Create refund for preDepositTotal if payment exists
+        const payment = await paymentModel.findOne({ rentalOrderId: rentalOrder._id });
+        if (payment && rentalOrder.preDepositTotal > 0) {
+            await refundModel.create({
+                amount: rentalOrder.preDepositTotal,
+                reason: 'Hủy đơn hàng',
+                status: 'pending',
+                paymentId: payment._id,
+                processedBy: '',
+                invoiceImage: ''
+            });
+        }
         // Populate references for response
         await rentalOrder.populate([
             { path: 'customerId' },
@@ -507,13 +545,11 @@ const cancelRentalOrder = async (req, res) => {
             { path: 'branchReturn' },
             { path: 'motorbikes' }
         ]);
-
         res.status(200).json({
             success: true,
             message: 'Hủy đơn hàng thành công',
             rentalOrder
         });
-
     } catch (error) {
         console.error('Error cancelling rental order:', error);
         res.status(500).json({
@@ -521,6 +557,52 @@ const cancelRentalOrder = async (req, res) => {
             message: 'Có lỗi xảy ra, vui lòng thử lại',
             error: error.message
         });
+    }
+};
+
+// POST /api/v1/customer/order/:orderId/feedback
+const createOrderFeedback = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { comment, satisfactionScore } = req.body;
+        const customerId = req.user.id;
+        if (!comment || typeof satisfactionScore !== 'number' || satisfactionScore < 1 || satisfactionScore > 5) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập nhận xét và điểm hài lòng (1-5).' });
+        }
+        // Check order exists, belongs to customer, and is completed
+        const order = await rentalOrderModel.findById(orderId);
+        if (!order || String(order.customerId) !== String(customerId) || order.status !== 'completed') {
+            return res.status(400).json({ success: false, message: 'Chỉ có thể đánh giá đơn hàng đã hoàn thành của bạn.' });
+        }
+        // Prevent duplicate feedback
+        const existing = await feedbackModel.findOne({ rentalOrderId: orderId, customerId });
+        if (existing) {
+            return res.status(400).json({ success: false, message: 'Bạn đã đánh giá đơn hàng này rồi.' });
+        }
+        const feedback = await feedbackModel.create({
+            comment,
+            satisfactionScore,
+            customerId,
+            rentalOrderId: orderId
+        });
+        res.status(201).json({ success: true, feedback });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET /api/v1/customer/order/:orderId/feedback
+const getOrderFeedback = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const customerId = req.user.id;
+        const feedback = await feedbackModel.findOne({ rentalOrderId: orderId, customerId });
+        if (!feedback) {
+            return res.status(404).json({ success: false, message: 'Chưa có đánh giá cho đơn hàng này.' });
+        }
+        res.status(200).json({ success: true, feedback });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -581,5 +663,7 @@ module.exports = {
     getRentalOrderById,
     updateRentalOrderStatus,
     cancelRentalOrder,
-    getCustomerOrderStatistics
+    getCustomerOrderStatistics,
+    createOrderFeedback,
+    getOrderFeedback
 };
