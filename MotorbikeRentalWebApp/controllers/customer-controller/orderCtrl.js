@@ -501,7 +501,7 @@ const cancelRentalOrder = async (req, res) => {
                     reason: 'Hủy đơn trước 8 tiếng',
                     status: 'pending',
                     paymentId: payment._id,
-                    processedBy: '',
+                    // processedBy: '', // Do not set to empty string
                     invoiceImage: ''
                 });
             }
@@ -534,7 +534,7 @@ const cancelRentalOrder = async (req, res) => {
                 reason: 'Hủy đơn hàng',
                 status: 'pending',
                 paymentId: payment._id,
-                processedBy: '',
+                // processedBy: '', // Do not set to empty string
                 invoiceImage: ''
             });
         }

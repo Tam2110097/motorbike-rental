@@ -194,17 +194,7 @@ const MyOrderPage = () => {
                         </Button>
                     );
                 }
-                actions.push(
-                    <Button
-                        key="details"
-                        type="primary"
-                        style={{ minWidth: 120, marginBottom: record.status === 'completed' ? 8 : 0 }}
-                        onClick={() => handleShowDetail(record)}
-                        block
-                    >
-                        Xem chi tiết
-                    </Button>
-                );
+
                 // Add Đánh giá button or feedback dropdown for completed orders
                 if (record.status === 'completed') {
                     if (feedbacks[record._id]) {
@@ -243,6 +233,17 @@ const MyOrderPage = () => {
                         );
                     }
                 }
+                actions.push(
+                    <Button
+                        key="details"
+                        type="primary"
+                        style={{ minWidth: 120, marginBottom: record.status === 'completed' ? 8 : 0 }}
+                        onClick={() => handleShowDetail(record)}
+                        block
+                    >
+                        Xem chi tiết
+                    </Button>
+                );
                 return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>{actions}</div>;
             }
         },
@@ -294,7 +295,7 @@ const MyOrderPage = () => {
                     Lưu ý:
                     <p>
                         - Quý khách hủy đơn sẽ phải đến chi nhánh gần nhất để được hoàn lại khoản phí đã thanh toán. <br />
-                        - Những đơn hàng chưa thanh toán trong vòng 8 tiếng sẽ bị hủy tự động.  <br />
+                        - Những đơn hàng chưa thanh toán trong vòng 6 tiếng sẽ bị hủy tự động.  <br />
                         - Quý khách sẽ trả toàn bộ khoản phí còn lại khi nhận xe.
                     </p>
                 </Typography.Text>

@@ -5,6 +5,7 @@ import { CarOutlined, DollarOutlined, SafetyOutlined, ClockCircleOutlined, Arrow
 import axios from 'axios'
 import { useNavigate, Link } from 'react-router-dom'
 import { useBooking } from '../../../context/BookingContext'
+import RecommendationMotorbikeType from '../../../components/RecommendationMotorbikeType'
 const { Title, Text, Paragraph } = Typography
 const { Content } = Layout
 
@@ -172,11 +173,18 @@ const AvailableMotorbikePage = () => {
                                 Tại {branchName}
                             </Text>
                         )}
-                        {motorbikeTypes.length > 0 && (
-                            <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                                Tìm thấy {motorbikeTypes.length} loại xe máy có sẵn
-                            </Text>
-                        )}
+                        {(bookingData.tripContext && bookingData.startBranch &&
+                            bookingData.tripContext.purpose &&
+                            bookingData.tripContext.distanceCategory &&
+                            bookingData.tripContext.numPeople &&
+                            bookingData.tripContext.terrain &&
+                            bookingData.tripContext.luggage &&
+                            Array.isArray(bookingData.tripContext.preferredFeatures)) && (
+                                <RecommendationMotorbikeType
+                                    tripContext={bookingData.tripContext}
+                                    branchReceiveId={bookingData.startBranch}
+                                />
+                            )}
                     </div>
 
                     {motorbikeTypes.length === 0 ? (

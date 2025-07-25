@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios';
 import { useBooking } from '../../../context/BookingContext'
 import dayjs from 'dayjs'
+import RecommendationMotorbikeType from '../../../components/RecommendationMotorbikeType';
 
 const containerStyle = {
     width: '1000px',
@@ -532,6 +533,14 @@ const SearchMotorbikeComponent = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Gợi ý loại xe phù hợp */}
+                {/* {(purpose && distanceCategory && numPeople && terrain && luggage && preferredFeatures.length > 0 && startBranch) && (
+                    <RecommendationMotorbikeType
+                        tripContext={{ purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures }}
+                        branchReceiveId={startBranch}
+                    />
+                )} */}
 
                 {/* Nút tìm kiếm */}
                 <div style={buttonContainerStyle}>

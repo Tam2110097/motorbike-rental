@@ -56,9 +56,11 @@ const OrderDetail = () => {
     const formatPrice = (price) =>
         new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
 
-    const start = dayjs(`${bookingData.startDate}T${bookingData.startTime}`);
-    const end = dayjs(`${bookingData.endDate}T${bookingData.endTime}`);
-    const rentalDays = Math.max(1, Math.ceil(end.diff(start, "day", true)));
+    // Calculate rental days using only date part
+    const startDateOnly = dayjs(bookingData.startDate).startOf('day');
+    const endDateOnly = dayjs(bookingData.endDate).startOf('day');
+    const durationDays = endDateOnly.diff(startDateOnly, 'day') + 1;
+    const rentalDays = durationDays <= 0 ? 1 : durationDays;
 
     const isSameBranch = bookingData.startBranch === bookingData.endBranch;
 

@@ -43,6 +43,8 @@ const {
     getSpecByMotorbikeType,
 } = require('../controllers/admin-controller/specCtrl');
 
+const { getAllFeedbacks } = require('../controllers/admin-controller/feedbackCtrl');
+
 //router onject
 const router = express.Router();
 
@@ -125,5 +127,8 @@ router.get('/specifications/get-by-id/:id', getSpecById);
 router.put('/specifications/update/:id', authMiddleware, authorizeRoles('admin'), updateSpec);
 // delete specification
 router.delete('/specifications/delete/:id', authMiddleware, authorizeRoles('admin'), deleteSpec);
+
+// Get all feedbacks
+router.get('/feedback/get-all', authMiddleware, authorizeRoles('admin'), getAllFeedbacks);
 
 module.exports = router;
