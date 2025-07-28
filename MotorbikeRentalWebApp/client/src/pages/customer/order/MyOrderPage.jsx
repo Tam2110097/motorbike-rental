@@ -78,10 +78,10 @@ const MyOrderPage = () => {
                     }));
                     setFeedbacks(feedbackResults);
 
-                    // Fetch document status for pending orders
-                    const pendingOrders = (data.rentalOrders || []).filter(o => o.status === 'pending');
+                    // Fetch document status for all orders
+                    const allOrders = (data.rentalOrders || []);
                     const documentResults = {};
-                    await Promise.all(pendingOrders.map(async (order) => {
+                    await Promise.all(allOrders.map(async (order) => {
                         try {
                             const resDoc = await fetch(`http://localhost:8080/api/v1/customer/order/${order._id}/documents/status`, {
                                 headers: { Authorization: `Bearer ${token}` }
@@ -171,49 +171,48 @@ const MyOrderPage = () => {
             align: 'center',
             render: (_, record) => {
                 const actions = [];
-                if (record.status === 'pending') {
-                    // Check if documents are uploaded
-                    const isDocumentsCompleted = documentStatus[record._id];
 
+                // Always show document button for all order statuses
+                const isDocumentsCompleted = documentStatus[record._id];
+
+                actions.push(
+                    <Button
+                        key="documents"
+                        style={{
+                            background: isDocumentsCompleted
+                                ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
+                                : 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '6px 16px',
+                            fontWeight: 600,
+                            minWidth: 180,
+                            marginBottom: 8
+                        }}
+                        onClick={() => {
+                            navigate(`/order/documents/${record._id}`);
+                        }}
+                        block
+                    >
+                        {isDocumentsCompleted ? 'Xem hình ảnh giấy tờ' : 'Cung cấp hình ảnh giấy tờ'}
+                    </Button>
+                );
+
+                // Show payment button only for pending orders with completed documents
+                if (record.status === 'pending' && isDocumentsCompleted) {
                     actions.push(
                         <Button
-                            key="documents"
-                            style={{
-                                background: isDocumentsCompleted
-                                    ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
-                                    : 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: 6,
-                                padding: '6px 16px',
-                                fontWeight: 600,
-                                minWidth: 180,
-                                marginBottom: 8
-                            }}
+                            key="pay"
+                            style={{ background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)', color: 'white', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 600, minWidth: 180, marginBottom: 8 }}
                             onClick={() => {
-                                navigate(`/order/documents/${record._id}`);
+                                navigate(`/order/my-order/${record._id}`);
                             }}
                             block
                         >
-                            {isDocumentsCompleted ? 'Xem hình ảnh giấy tờ' : 'Cung cấp hình ảnh giấy tờ'}
+                            Thanh toán phí đặt trước
                         </Button>
                     );
-
-                    // Only show payment button if documents are completed
-                    if (isDocumentsCompleted) {
-                        actions.push(
-                            <Button
-                                key="pay"
-                                style={{ background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)', color: 'white', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 600, minWidth: 180, marginBottom: 8 }}
-                                onClick={() => {
-                                    navigate(`/order/my-order/${record._id}`);
-                                }}
-                                block
-                            >
-                                Thanh toán phí đặt trước
-                            </Button>
-                        );
-                    }
                 } else if (record.status === 'confirmed') {
                     actions.push(
                         <Button
@@ -324,7 +323,10 @@ const MyOrderPage = () => {
             console.log('Order detail response:', data);
             if (data.success && data.rentalOrder) {
                 console.log('Rental order motorbikes:', data.rentalOrder.motorbikes);
-                setOrderDetail(data.rentalOrder);
+                setOrderDetail({
+                    ...data.rentalOrder,
+                    motorbikesByType: data.motorbikesByType || {}
+                });
                 setMotorbikeDetails(data.motorbikeDetails || []);
                 setAccessoryDetails(data.accessoryDetails || []);
             } else {
@@ -411,21 +413,39 @@ const MyOrderPage = () => {
                                                 title: 'Mã xe',
                                                 key: 'motorbikeCodes',
                                                 render: (_, r) => {
-                                                    console.log('Rendering motorbike codes for:', r);
-                                                    console.log('Order detail motorbikes:', orderDetail?.motorbikes);
+                                                    // Use the new motorbikesByType structure if available
+                                                    const typeId = r.motorbikeTypeId?._id;
+                                                    if (typeId && orderDetail?.motorbikesByType && orderDetail.motorbikesByType[typeId]) {
+                                                        const codes = orderDetail.motorbikesByType[typeId].codes;
+                                                        if (codes && codes.length > 0) {
+                                                            return (
+                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                                    {codes.map((code, index) => (
+                                                                        <span
+                                                                            key={index}
+                                                                            style={{
+                                                                                background: '#e8f5e8',
+                                                                                color: '#2d5a2d',
+                                                                                padding: '2px 6px',
+                                                                                borderRadius: '4px',
+                                                                                fontSize: '12px',
+                                                                                fontWeight: '600',
+                                                                                border: '1px solid #b7eb8f'
+                                                                            }}
+                                                                        >
+                                                                            {code}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        }
+                                                    }
 
-                                                    // Find the actual motorbikes for this motorbike type in the order
+                                                    // Fallback to old logic if motorbikesByType is not available
                                                     const orderMotorbikes = orderDetail?.motorbikes || [];
-                                                    console.log('Comparing:', {
-                                                        detailTypeId: r.motorbikeTypeId._id,
-                                                        orderMotorbikes: orderMotorbikes.map(mb => mb.motorbikeTypeId._id)
-                                                    });
-
                                                     const typeMotorbikes = orderMotorbikes.filter(mb =>
                                                         mb.motorbikeTypeId._id === r.motorbikeTypeId._id
                                                     );
-
-                                                    console.log('Type motorbikes found:', typeMotorbikes);
 
                                                     if (typeMotorbikes.length > 0) {
                                                         return (

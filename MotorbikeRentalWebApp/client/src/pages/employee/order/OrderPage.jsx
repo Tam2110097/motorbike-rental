@@ -51,6 +51,7 @@ const OrderPage = () => {
     const [refundModal, setRefundModal] = useState({ visible: false, amount: 0 });
     const [motorbikeDetails, setMotorbikeDetails] = useState([]);
     const [accessoryDetails, setAccessoryDetails] = useState([]);
+    const [documentModal, setDocumentModal] = useState({ visible: false, orderId: null, documents: null });
 
     // Pagination state for each status
     const [pagination, setPagination] = useState(() => {
@@ -78,8 +79,27 @@ const OrderPage = () => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const data = await res.json();
-                if (data.success) setOrders(data.rentalOrders || []);
-                else message.error(data.message || 'Không thể lấy danh sách đơn hàng.');
+                if (data.success) {
+                    const ordersWithDocuments = await Promise.all((data.rentalOrders || []).map(async (order) => {
+                        try {
+                            const docRes = await fetch(`http://localhost:8080/api/v1/employee/order/${order._id}/documents`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (docRes.ok) {
+                                const docData = await docRes.json();
+                                if (docData.success && docData.documents) {
+                                    return { ...order, documentsValid: docData.documents.isValid };
+                                }
+                            }
+                        } catch {
+                            // If document endpoint fails, assume not valid
+                        }
+                        return { ...order, documentsValid: false };
+                    }));
+                    setOrders(ordersWithDocuments);
+                } else {
+                    message.error(data.message || 'Không thể lấy danh sách đơn hàng.');
+                }
             } catch {
                 message.error('Lỗi khi tải đơn hàng.');
             } finally {
@@ -151,11 +171,37 @@ const OrderPage = () => {
                                         message.error('Lỗi khi cập nhật trạng thái thanh toán.');
                                     }
                                 }}
-                                disabled={isPaid}
+                                disabled={isPaid || !record.documentsValid}
                                 style={{ minWidth: 180 }}
                                 block
                             >
                                 Hoàn thành thanh toán
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    try {
+                                        const token = localStorage.getItem('token');
+                                        const res = await fetch(`http://localhost:8080/api/v1/employee/order/${record._id}/documents`, {
+                                            headers: { Authorization: `Bearer ${token}` }
+                                        });
+                                        const data = await res.json();
+                                        if (data.success && data.documents) {
+                                            setDocumentModal({
+                                                visible: true,
+                                                orderId: record._id,
+                                                documents: data.documents
+                                            });
+                                        } else {
+                                            message.warning('Chưa có giấy tờ được tải lên');
+                                        }
+                                    } catch {
+                                        message.error('Lỗi khi tải thông tin giấy tờ.');
+                                    }
+                                }}
+                                style={{ minWidth: 140 }}
+                                block
+                            >
+                                Kiểm tra giấy tờ
                             </Button>
                             <Button
                                 onClick={async () => {
@@ -484,12 +530,27 @@ const OrderPage = () => {
                                     columns={[
                                         { title: 'Tên xe', dataIndex: ['motorbikeTypeId', 'name'], key: 'type', render: (_, r) => r.motorbikeTypeId?.name || '-' },
                                         { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity' },
+                                        {
+                                            title: 'Mã xe',
+                                            key: 'codes',
+                                            render: (_, r) => {
+                                                // Find the corresponding motorbikesByType data
+                                                const typeId = r.motorbikeTypeId?._id;
+                                                if (typeId && orderDetail.motorbikesByType && orderDetail.motorbikesByType[typeId]) {
+                                                    const codes = orderDetail.motorbikesByType[typeId].codes;
+                                                    return codes && codes.length > 0 ? codes.join(', ') : '-';
+                                                }
+                                                return '-';
+                                            }
+                                        },
                                         { title: 'Đơn giá', dataIndex: 'unitPrice', key: 'unitPrice', render: v => v?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) },
                                         { title: 'Miễn trừ thiệt hại', dataIndex: 'damageWaiverFee', key: 'damageWaiverFee', render: v => v ? v.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '-' },
                                         {
                                             title: 'Tổng cộng', key: 'total', render: (_, r) => {
                                                 let duration;
                                                 let startTime, endTime;
+
+
                                                 if (orderDetail.startTime && orderDetail.endTime) {
                                                     startTime = dayjs(`${orderDetail.receiveDate}T${orderDetail.startTime}`);
                                                     endTime = dayjs(`${orderDetail.returnDate}T${orderDetail.endTime}`);
@@ -498,11 +559,13 @@ const OrderPage = () => {
                                                     endTime = dayjs(orderDetail.returnDate);
                                                 }
                                                 if (startTime.isValid() && endTime.isValid()) {
-                                                    duration = endTime.diff(startTime, 'day') + 1;
+                                                    // duration = endTime.diff(startTime, 'day') + 1;
+                                                    const durationInDays = endTime.diff(startTime, 'day', true);
+                                                    const roundedDuration = Math.ceil(durationInDays);
+                                                    duration = roundedDuration <= 0 ? 1 : roundedDuration;
                                                 } else {
                                                     duration = 1;
                                                 }
-                                                if (!r.unitPrice || !r.quantity) return '-';
                                                 const totalPerDay = r.unitPrice + (r.damageWaiverFee || 0);
                                                 const total = totalPerDay * r.quantity * duration;
                                                 return total.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
@@ -539,6 +602,196 @@ const OrderPage = () => {
                     </div>
                 ) : (
                     <div>Không tìm thấy chi tiết đơn hàng.</div>
+                )}
+            </Modal>
+
+            {/* Document Validation Modal */}
+            <Modal
+                title="Kiểm tra giấy tờ"
+                visible={documentModal.visible}
+                onCancel={() => setDocumentModal({ visible: false, orderId: null, documents: null })}
+                footer={[
+                    <Button key="cancel" onClick={() => setDocumentModal({ visible: false, orderId: null, documents: null })}>
+                        Đóng
+                    </Button>,
+                    <Button
+                        key="validate"
+                        type={documentModal.documents?.isValid ? "default" : "primary"}
+                        danger={documentModal.documents?.isValid}
+                        onClick={async () => {
+                            try {
+                                const token = localStorage.getItem('token');
+                                const newIsValid = !documentModal.documents?.isValid;
+                                const res = await fetch(`http://localhost:8080/api/v1/employee/order/${documentModal.orderId}/validate-documents`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        Authorization: `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({ isValid: newIsValid })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    const messageText = newIsValid ? 'Đã xác nhận giấy tờ hợp lệ!' : 'Đã đánh dấu giấy tờ chưa chính xác!';
+                                    message.success(messageText);
+                                    setOrders(prev => prev.map(o => o._id === documentModal.orderId ? { ...o, documentsValid: newIsValid } : o));
+                                    setDocumentModal({
+                                        visible: false,
+                                        orderId: null,
+                                        documents: null
+                                    });
+                                } else {
+                                    message.error(data.message || 'Cập nhật trạng thái giấy tờ thất bại');
+                                }
+                            } catch {
+                                message.error('Lỗi khi cập nhật trạng thái giấy tờ.');
+                            }
+                        }}
+                    >
+                        {documentModal.documents?.isValid ? 'Giấy tờ chưa chính xác' : 'Xác nhận hợp lệ'}
+                    </Button>
+                ]}
+                width={800}
+            >
+                {documentModal.documents && (
+                    <div>
+                        <div style={{ marginBottom: 16 }}>
+                            <strong>Trạng thái hiện tại:</strong>
+                            <Tag color={documentModal.documents.isValid ? 'green' : 'orange'} style={{ marginLeft: 8 }}>
+                                {documentModal.documents.isValid ? 'Đã xác nhận hợp lệ' : 'Chưa xác nhận'}
+                            </Tag>
+                        </div>
+
+                        {/* CCCD Images */}
+                        {documentModal.documents.cccdImages && documentModal.documents.cccdImages.length > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <h4>CCCD/CMND ({documentModal.documents.cccdImages.length} hình ảnh):</h4>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                                    gap: 12
+                                }}>
+                                    {documentModal.documents.cccdImages.map((image, index) => (
+                                        <div key={`cccd-${index}`} style={{
+                                            border: '1px solid #d9d9d9',
+                                            borderRadius: 6,
+                                            overflow: 'hidden',
+                                            background: '#fff'
+                                        }}>
+                                            <img
+                                                src={`http://localhost:8080/uploads/${image}`}
+                                                alt={`CCCD ${index + 1}`}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '120px',
+                                                    objectFit: 'cover',
+                                                    display: 'block'
+                                                }}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.nextSibling.style.display = 'flex';
+                                                }}
+                                            />
+                                            <div style={{
+                                                display: 'none',
+                                                width: '100%',
+                                                height: '120px',
+                                                background: '#f5f5f5',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '12px',
+                                                color: '#999'
+                                            }}>
+                                                Lỗi tải ảnh
+                                            </div>
+                                            <div style={{
+                                                padding: '4px 8px',
+                                                fontSize: '11px',
+                                                textAlign: 'center',
+                                                background: '#fafafa',
+                                                color: '#666'
+                                            }}>
+                                                CCCD {index + 1}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Driver License Images */}
+                        {documentModal.documents.driverLicenseImages && documentModal.documents.driverLicenseImages.length > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <h4>Bằng lái xe ({documentModal.documents.driverLicenseImages.length} hình ảnh):</h4>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                                    gap: 12
+                                }}>
+                                    {documentModal.documents.driverLicenseImages.map((image, index) => (
+                                        <div key={`license-${index}`} style={{
+                                            border: '1px solid #d9d9d9',
+                                            borderRadius: 6,
+                                            overflow: 'hidden',
+                                            background: '#fff'
+                                        }}>
+                                            <img
+                                                src={`http://localhost:8080/uploads/${image}`}
+                                                alt={`Bằng lái ${index + 1}`}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '120px',
+                                                    objectFit: 'cover',
+                                                    display: 'block'
+                                                }}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.nextSibling.style.display = 'flex';
+                                                }}
+                                            />
+                                            <div style={{
+                                                display: 'none',
+                                                width: '100%',
+                                                height: '120px',
+                                                background: '#f5f5f5',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '12px',
+                                                color: '#999'
+                                            }}>
+                                                Lỗi tải ảnh
+                                            </div>
+                                            <div style={{
+                                                padding: '4px 8px',
+                                                fontSize: '11px',
+                                                textAlign: 'center',
+                                                background: '#fafafa',
+                                                color: '#666'
+                                            }}>
+                                                Bằng lái {index + 1}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{
+                            padding: 12,
+                            background: '#f6ffed',
+                            border: '1px solid #b7eb8f',
+                            borderRadius: 6,
+                            marginTop: 16
+                        }}>
+                            <strong>Hướng dẫn kiểm tra:</strong>
+                            <ul style={{ marginTop: 8, marginBottom: 0 }}>
+                                <li>Kiểm tra tính rõ ràng và đầy đủ của thông tin trên giấy tờ</li>
+                                <li>Xác nhận CCCD/CMND và bằng lái xe thuộc về khách hàng</li>
+                                <li>Đảm bảo giấy tờ còn hiệu lực và không bị làm giả</li>
+                                <li>Nhấn "Xác nhận hợp lệ" sau khi kiểm tra xong</li>
+                            </ul>
+                        </div>
+                    </div>
                 )}
             </Modal>
         </div>

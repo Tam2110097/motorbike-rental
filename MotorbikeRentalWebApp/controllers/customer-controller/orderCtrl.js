@@ -7,10 +7,14 @@ const branchModel = require('../../models/branchModels');
 const accessoryDetailModel = require('../../models/accessoryDetailModels');
 const accessoryModel = require('../../models/accessoryModels');
 const tripContextModel = require('../../models/tripContextModels');
+const orderDocumentModel = require('../../models/orderDocumentModels');
 const mongoose = require('mongoose');
 const paymentModel = require('../../models/paymentModels');
 const refundModel = require('../../models/refundModels');
 const feedbackModel = require('../../models/feedbackModels');
+const dayjs = require('dayjs');
+const fs = require('fs');
+const path = require('path');
 
 // Create rental order controller
 const createRentalOrder = async (req, res) => {
@@ -26,10 +30,11 @@ const createRentalOrder = async (req, res) => {
             depositTotal,
             motorbikeDetails, // Array of {motorbikeTypeId, quantity, unitPrice}
             accessoryDetails, // Array of {accessoryId, quantity}
+            receiveAddress, // String: address for receiving motorbike
             tripContext // Object: {purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures}
         } = req.body;
 
-        if (!branchReceive || !branchReturn || !receiveDate || !returnDate || !grandTotal || !motorbikeDetails) {
+        if (!branchReceive || !branchReturn || !receiveDate || !returnDate || !grandTotal || !motorbikeDetails || !receiveAddress) {
             return res.status(400).json({
                 success: false,
                 message: 'Tất cả các trường là bắt buộc'
@@ -46,6 +51,10 @@ const createRentalOrder = async (req, res) => {
 
         if (returnDateTime <= receiveDateTime) {
             return res.status(400).json({ success: false, message: 'Ngày trả xe phải lớn hơn ngày nhận xe' });
+        }
+
+        if (!receiveAddress || receiveAddress.trim() === '') {
+            return res.status(400).json({ success: false, message: 'Địa chỉ nhận xe không được để trống' });
         }
 
         // Kiểm tra người dùng
@@ -103,7 +112,15 @@ const createRentalOrder = async (req, res) => {
         }
 
         // Tính số ngày thuê
-        const rentalDays = Math.ceil((returnDateTime - receiveDateTime) / (1000 * 60 * 60 * 24));
+        // const rentalDays = Math.ceil((returnDateTime - receiveDateTime) / (1000 * 60 * 60 * 24));
+        // const rentalDays = dayjs(returnDateTime).diff(dayjs(receiveDateTime), 'day') + 1;
+        const startDate = dayjs(receiveDateTime);
+        const endDate = dayjs(returnDateTime);
+        const durationInDays = endDate.diff(startDate, 'day', true);
+        const roundedDuration = Math.ceil(durationInDays);
+        const rentalDays = roundedDuration <= 0 ? 1 : roundedDuration;
+        // const rentalDays1 = roundedDuration <= 0 ? 1 : roundedDuration;
+        console.log('>>> BE: rentalDays', rentalDays);
 
         // Tính tiền xe
         const motorbikeTotal = motorbikeDetails.reduce((total, detail) => {
@@ -190,11 +207,21 @@ const createRentalOrder = async (req, res) => {
             grandTotal,
             preDepositTotal,
             depositTotal,
+            receiveAddress,
             motorbikes: selectedMotorbikes
         });
 
 
         await newRentalOrder.save();
+
+        // Create order document record
+        const newOrderDocument = new orderDocumentModel({
+            rentalOrderId: newRentalOrder._id,
+            cccdImages: [],
+            driverLicenseImages: [],
+            isCompleted: false
+        });
+        await newOrderDocument.save();
 
         const newPayment = new paymentModel({
             paymentType: 'preDeposit',
@@ -343,7 +370,14 @@ const getRentalOrderById = async (req, res) => {
                 { path: 'customerId' },
                 { path: 'branchReceive' },
                 { path: 'branchReturn' },
-                { path: 'motorbikes' }
+                {
+                    path: 'motorbikes.motorbikeId',
+                    select: 'code motorbikeType branchId status'
+                },
+                {
+                    path: 'motorbikes.motorbikeTypeId',
+                    select: 'name prefixCode'
+                }
             ]);
 
         if (!rentalOrder) {
@@ -380,11 +414,31 @@ const getRentalOrderById = async (req, res) => {
             select: 'name price' // add more fields if needed
         });
 
+        // Group motorbikes by type and include codes
+        const motorbikesByType = {};
+        if (rentalOrder.motorbikes && rentalOrder.motorbikes.length > 0) {
+            rentalOrder.motorbikes.forEach(mb => {
+                const typeId = mb.motorbikeTypeId._id.toString();
+                if (!motorbikesByType[typeId]) {
+                    motorbikesByType[typeId] = {
+                        motorbikeTypeId: mb.motorbikeTypeId,
+                        quantity: 0,
+                        codes: []
+                    };
+                }
+                motorbikesByType[typeId].quantity += mb.quantity || 1;
+                if (mb.motorbikeId && mb.motorbikeId.code) {
+                    motorbikesByType[typeId].codes.push(mb.motorbikeId.code);
+                }
+            });
+        }
+
         res.status(200).json({
             success: true,
             message: 'Lấy thông tin đơn hàng thành công',
             rentalOrder,
             motorbikeDetails,
+            motorbikesByType,
             accessoryDetails
         });
 
@@ -657,6 +711,371 @@ const getCustomerOrderStatistics = async (req, res) => {
     }
 };
 
+// Upload order documents
+const uploadOrderDocuments = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const customerId = req.user.id;
+
+        // Check if order exists and belongs to customer
+        const order = await rentalOrderModel.findById(orderId);
+        if (!order || String(order.customerId) !== String(customerId)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Đơn hàng không tồn tại hoặc không thuộc về bạn'
+            });
+        }
+
+        // Check if order is in pending status
+        if (order.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'Chỉ có thể tải lên giấy tờ cho đơn hàng đang chờ thanh toán'
+            });
+        }
+
+        // Get uploaded files
+        console.log('req.files:', req.files);
+        console.log('req.body:', req.body);
+        console.log('req.files.cccdImages:', req.files?.cccdImages);
+        console.log('req.files.driverLicenseImages:', req.files?.driverLicenseImages);
+
+        const cccdImages = req.files?.cccdImages || [];
+        const driverLicenseImages = req.files?.driverLicenseImages || [];
+
+        console.log('cccdImages array length:', cccdImages.length);
+        console.log('driverLicenseImages array length:', driverLicenseImages.length);
+
+        if (cccdImages.length === 0 && driverLicenseImages.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng tải lên ít nhất một loại giấy tờ'
+            });
+        }
+
+        // Calculate total motorbike quantity from order
+        const totalMotorbikeQuantity = order.motorbikes.reduce((total, motorbike) => total + motorbike.quantity, 0);
+
+        // Process and save images
+        const cccdImageUrls = [];
+        const driverLicenseImageUrls = [];
+
+        // Process CCCD images
+        if (Array.isArray(cccdImages)) {
+            for (const file of cccdImages) {
+                console.log('CCCD file object:', file);
+                console.log('CCCD filename:', file.filename);
+                console.log('CCCD path:', file.path);
+                // Use the actual filename that multer saved
+                if (file.filename) {
+                    // Check if file actually exists on disk
+                    const filePath = path.join(__dirname, '../../uploads', file.filename);
+                    if (fs.existsSync(filePath)) {
+                        console.log('CCCD file exists on disk:', filePath);
+                        cccdImageUrls.push(file.filename);
+                    } else {
+                        console.error('CCCD file does not exist on disk:', filePath);
+                    }
+                } else {
+                    console.error('CCCD file has no filename:', file);
+                }
+            }
+        } else if (cccdImages) {
+            console.log('Single CCCD file object:', cccdImages);
+            console.log('Single CCCD filename:', cccdImages.filename);
+            console.log('Single CCCD path:', cccdImages.path);
+            if (cccdImages.filename) {
+                // Check if file actually exists on disk
+                const filePath = path.join(__dirname, '../../uploads', cccdImages.filename);
+                if (fs.existsSync(filePath)) {
+                    console.log('Single CCCD file exists on disk:', filePath);
+                    cccdImageUrls.push(cccdImages.filename);
+                } else {
+                    console.error('Single CCCD file does not exist on disk:', filePath);
+                }
+            } else {
+                console.error('Single CCCD file has no filename:', cccdImages);
+            }
+        }
+
+        // Process driver license images
+        if (Array.isArray(driverLicenseImages)) {
+            for (const file of driverLicenseImages) {
+                console.log('Driver license file object:', file);
+                console.log('Driver license filename:', file.filename);
+                console.log('Driver license path:', file.path);
+                // Use the actual filename that multer saved
+                if (file.filename) {
+                    // Check if file actually exists on disk
+                    const filePath = path.join(__dirname, '../../uploads', file.filename);
+                    if (fs.existsSync(filePath)) {
+                        console.log('Driver license file exists on disk:', filePath);
+                        driverLicenseImageUrls.push(file.filename);
+                    } else {
+                        console.error('Driver license file does not exist on disk:', filePath);
+                    }
+                } else {
+                    console.error('Driver license file has no filename:', file);
+                }
+            }
+        } else if (driverLicenseImages) {
+            console.log('Single driver license file object:', driverLicenseImages);
+            console.log('Single driver license filename:', driverLicenseImages.filename);
+            console.log('Single driver license path:', driverLicenseImages.path);
+            if (driverLicenseImages.filename) {
+                // Check if file actually exists on disk
+                const filePath = path.join(__dirname, '../../uploads', driverLicenseImages.filename);
+                if (fs.existsSync(filePath)) {
+                    console.log('Single driver license file exists on disk:', filePath);
+                    driverLicenseImageUrls.push(driverLicenseImages.filename);
+                } else {
+                    console.error('Single driver license file does not exist on disk:', filePath);
+                }
+            } else {
+                console.error('Single driver license file has no filename:', driverLicenseImages);
+            }
+        }
+
+        // Calculate total images after processing
+        const totalCccdImages = cccdImageUrls.length;
+        const totalDriverLicenseImages = driverLicenseImageUrls.length;
+
+        // Check if we have existing documents to add to
+        const existingDocument = await orderDocumentModel.findOne({ rentalOrderId: orderId });
+
+        let finalCccdImages = [];
+        let finalDriverLicenseImages = [];
+        let isCompleted = false;
+
+        if (existingDocument) {
+            // Add new images to existing ones
+            finalCccdImages = [...existingDocument.cccdImages, ...cccdImageUrls];
+            finalDriverLicenseImages = [...existingDocument.driverLicenseImages, ...driverLicenseImageUrls];
+        } else {
+            // Use only new images
+            finalCccdImages = cccdImageUrls;
+            finalDriverLicenseImages = driverLicenseImageUrls;
+        }
+
+        // Validate that the total images match the motorbike quantity
+        const totalFinalCccd = finalCccdImages.length;
+        const totalFinalDriverLicense = finalDriverLicenseImages.length;
+
+        // Set isCompleted to true only if all quantities match
+        if (totalFinalCccd === totalMotorbikeQuantity &&
+            totalFinalDriverLicense === totalMotorbikeQuantity) {
+            isCompleted = true;
+        }
+
+        // Update or create order document record
+        console.log('Final CCCD images to save:', finalCccdImages);
+        console.log('Final driver license images to save:', finalDriverLicenseImages);
+
+        if (existingDocument) {
+            // Update existing document
+            existingDocument.cccdImages = finalCccdImages;
+            existingDocument.driverLicenseImages = finalDriverLicenseImages;
+            existingDocument.isCompleted = isCompleted;
+            await existingDocument.save();
+            console.log('Updated existing document');
+        } else {
+            // Create new document record
+            const newDoc = await orderDocumentModel.create({
+                rentalOrderId: orderId,
+                cccdImages: finalCccdImages,
+                driverLicenseImages: finalDriverLicenseImages,
+                isCompleted: isCompleted
+            });
+            console.log('Created new document:', newDoc);
+        }
+
+        const responseMessage = isCompleted
+            ? 'Tải lên giấy tờ thành công! Đã đủ số lượng giấy tờ cần thiết.'
+            : `Tải lên giấy tờ thành công! Cần thêm ${totalMotorbikeQuantity - totalFinalCccd} CCCD và ${totalMotorbikeQuantity - totalFinalDriverLicense} bằng lái xe.`;
+
+        res.status(200).json({
+            success: true,
+            message: responseMessage,
+            documentInfo: {
+                cccdCount: totalFinalCccd,
+                licenseCount: totalFinalDriverLicense,
+                requiredCount: totalMotorbikeQuantity,
+                isCompleted: isCompleted
+            }
+        });
+
+    } catch (error) {
+        console.error('Error uploading order documents:', error);
+
+        // Handle multer errors specifically
+        if (error.name === 'MulterError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Lỗi tải lên file: ' + error.message
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Có lỗi xảy ra khi tải lên giấy tờ',
+            error: error.message
+        });
+    }
+};
+
+// Get document completion status
+const getDocumentStatus = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const customerId = req.user.id;
+
+        // Check if order exists and belongs to customer
+        const order = await rentalOrderModel.findById(orderId);
+        if (!order || String(order.customerId) !== String(customerId)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Đơn hàng không tồn tại hoặc không thuộc về bạn'
+            });
+        }
+
+        // Find document record
+        const documentRecord = await orderDocumentModel.findOne({ rentalOrderId: orderId });
+
+        res.status(200).json({
+            success: true,
+            isCompleted: documentRecord ? documentRecord.isCompleted : false
+        });
+
+    } catch (error) {
+        console.error('Error getting document status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Có lỗi xảy ra khi kiểm tra trạng thái giấy tờ',
+            error: error.message
+        });
+    }
+};
+
+// Clean up duplicate documents
+const cleanupDuplicateDocuments = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const customerId = req.user.id;
+
+        // Check if order exists and belongs to customer
+        const order = await rentalOrderModel.findById(orderId);
+        if (!order || String(order.customerId) !== String(customerId)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Đơn hàng không tồn tại hoặc không thuộc về bạn'
+            });
+        }
+
+        // Find and delete document record
+        const documentRecord = await orderDocumentModel.findOneAndDelete({ rentalOrderId: orderId });
+
+        if (documentRecord) {
+            console.log('Deleted duplicate document record:', documentRecord);
+            res.status(200).json({
+                success: true,
+                message: 'Đã xóa giấy tờ trùng lặp. Vui lòng tải lên lại.'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy giấy tờ để xóa'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error cleaning up duplicate documents:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Có lỗi xảy ra khi xóa giấy tờ trùng lặp',
+            error: error.message
+        });
+    }
+};
+
+// Test file access
+const testFileAccess = async (req, res) => {
+    try {
+        const testFile = '1753696498582-hondablade110cc.png';
+        const filePath = path.join(__dirname, '../../uploads', testFile);
+
+        if (fs.existsSync(filePath)) {
+            res.status(200).json({
+                success: true,
+                message: 'File exists on disk',
+                filePath: filePath,
+                fileUrl: `http://localhost:8080/uploads/${testFile}`
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'File does not exist on disk',
+                filePath: filePath
+            });
+        }
+    } catch (error) {
+        console.error('Error testing file access:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error testing file access',
+            error: error.message
+        });
+    }
+};
+
+// Get existing documents
+const getExistingDocuments = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const customerId = req.user.id;
+
+        // Check if order exists and belongs to customer
+        const order = await rentalOrderModel.findById(orderId);
+        if (!order || String(order.customerId) !== String(customerId)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Đơn hàng không tồn tại hoặc không thuộc về bạn'
+            });
+        }
+
+        // Find document record
+        const documentRecord = await orderDocumentModel.findOne({ rentalOrderId: orderId });
+
+        if (!documentRecord) {
+            return res.status(404).json({
+                success: false,
+                message: 'Chưa có giấy tờ được tải lên'
+            });
+        }
+
+        console.log('Retrieved document record:', documentRecord);
+        console.log('CCCD images from DB:', documentRecord.cccdImages);
+        console.log('Driver license images from DB:', documentRecord.driverLicenseImages);
+
+        res.status(200).json({
+            success: true,
+            documents: {
+                cccdImages: documentRecord.cccdImages || [],
+                driverLicenseImages: documentRecord.driverLicenseImages || [],
+                isCompleted: documentRecord.isCompleted,
+                uploadedAt: documentRecord.uploadedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting existing documents:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Có lỗi xảy ra khi lấy thông tin giấy tờ',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     createRentalOrder,
     getCustomerRentalOrders,
@@ -665,5 +1084,10 @@ module.exports = {
     cancelRentalOrder,
     getCustomerOrderStatistics,
     createOrderFeedback,
-    getOrderFeedback
+    getOrderFeedback,
+    uploadOrderDocuments,
+    getDocumentStatus,
+    getExistingDocuments,
+    testFileAccess,
+    cleanupDuplicateDocuments
 };

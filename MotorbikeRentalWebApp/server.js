@@ -36,6 +36,17 @@ app.use("/api/v1/recommendation", require("./routes/recommendationRoutes"));
 app.use("/uploads", express.static("uploads")); // Cho phép truy cập ảnh từ trình duyệt
 app.use("/api/v1", uploadRoutes); // Sử dụng route upload
 
+// Global error handler for multer errors
+app.use((error, req, res, next) => {
+    if (error.name === 'MulterError') {
+        return res.status(400).json({
+            success: false,
+            message: 'Lỗi tải lên file: ' + error.message
+        });
+    }
+    next(error);
+});
+
 //port
 const port = process.env.PORT || 8080;
 //listen port

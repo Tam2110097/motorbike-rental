@@ -112,17 +112,27 @@ const InvoicePage = () => {
                     <tr>
                         <th>Tên xe</th>
                         <th>SL</th>
-                        <th>Biển số</th>
+                        <th>Mã xe</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {(invoice.motorbikes || []).map((m, idx) => (
-                        <tr key={idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
-                            <td>{getTypeName(m.motorbikeTypeId)}</td>
-                            <td>{m.quantity}</td>
-                            <td>{m.motorbikeId?.code || '-'}</td>
-                        </tr>
-                    ))}
+                    {invoice.motorbikesByType ?
+                        Object.values(invoice.motorbikesByType).map((typeData, idx) => (
+                            <tr key={idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                                <td>{getTypeName(typeData.motorbikeTypeId)}</td>
+                                <td>{typeData.quantity}</td>
+                                <td>{typeData.codes && typeData.codes.length > 0 ? typeData.codes.join(', ') : '-'}</td>
+                            </tr>
+                        ))
+                        :
+                        (invoice.motorbikes || []).map((m, idx) => (
+                            <tr key={idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                                <td>{getTypeName(m.motorbikeTypeId)}</td>
+                                <td>{m.quantity}</td>
+                                <td>{m.motorbikeId?.code || '-'}</td>
+                            </tr>
+                        ))
+                    }
                 </tbody>
             </table>
 

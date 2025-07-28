@@ -7,6 +7,7 @@ const rentalOrderMotorbikeDetailModel = require('../../models/rentalOrderMotorbi
 const motorbikeModel = require('../../models/motorbikeModels');
 const refundModel = require('../../models/refundModels');
 const paymentModel = require('../../models/paymentModels');
+const orderDocumentModel = require('../../models/orderDocumentModels');
 const dayjs = require('dayjs');
 const cron = require('node-cron');
 
@@ -133,12 +134,32 @@ const getFullInvoiceData = async (req, res) => {
             .populate('accessoryId');
         const formattedAccessories = accessories.map(a => ({ accessory: a.accessoryId, quantity: a.quantity }));
 
+        // Group motorbikes by type and include codes
+        const motorbikesByType = {};
+        if (order.motorbikes && order.motorbikes.length > 0) {
+            order.motorbikes.forEach(mb => {
+                const typeId = mb.motorbikeTypeId._id.toString();
+                if (!motorbikesByType[typeId]) {
+                    motorbikesByType[typeId] = {
+                        motorbikeTypeId: mb.motorbikeTypeId,
+                        quantity: 0,
+                        codes: []
+                    };
+                }
+                motorbikesByType[typeId].quantity += mb.quantity || 1;
+                if (mb.motorbikeId && mb.motorbikeId.code) {
+                    motorbikesByType[typeId].codes.push(mb.motorbikeId.code);
+                }
+            });
+        }
+
         res.status(200).json({
             success: true,
             message: 'Lấy dữ liệu hóa đơn đầy đủ thành công',
             invoice: {
                 ...order,
                 motorbikeDetails,
+                motorbikesByType,
                 accessories: formattedAccessories
             }
         });
@@ -353,6 +374,102 @@ const getAllRefunds = async (req, res) => {
     }
 };
 
+// Get order documents for validation
+const getOrderDocuments = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        // Check if order exists
+        const order = await rentalOrderModel.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Đơn hàng không tồn tại'
+            });
+        }
+
+        // Find document record
+        const documentRecord = await orderDocumentModel.findOne({ rentalOrderId: orderId });
+
+        if (!documentRecord) {
+            return res.status(404).json({
+                success: false,
+                message: 'Chưa có giấy tờ được tải lên'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            documents: {
+                cccdImages: documentRecord.cccdImages || [],
+                driverLicenseImages: documentRecord.driverLicenseImages || [],
+                isCompleted: documentRecord.isCompleted,
+                isValid: documentRecord.isValid,
+                uploadedAt: documentRecord.uploadedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting order documents:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Có lỗi xảy ra khi lấy thông tin giấy tờ',
+            error: error.message
+        });
+    }
+};
+
+// Validate order documents
+const validateOrderDocuments = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { isValid } = req.body;
+
+        // Check if order exists
+        const order = await rentalOrderModel.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Đơn hàng không tồn tại'
+            });
+        }
+
+        // Find and update document record
+        const documentRecord = await orderDocumentModel.findOne({ rentalOrderId: orderId });
+
+        if (!documentRecord) {
+            return res.status(404).json({
+                success: false,
+                message: 'Chưa có giấy tờ được tải lên'
+            });
+        }
+
+        // Update validation status
+        documentRecord.isValid = isValid;
+        await documentRecord.save();
+
+        res.status(200).json({
+            success: true,
+            message: isValid ? 'Đã xác nhận giấy tờ hợp lệ' : 'Đã đánh dấu giấy tờ không hợp lệ',
+            documents: {
+                cccdImages: documentRecord.cccdImages || [],
+                driverLicenseImages: documentRecord.driverLicenseImages || [],
+                isCompleted: documentRecord.isCompleted,
+                isValid: documentRecord.isValid,
+                uploadedAt: documentRecord.uploadedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Error validating order documents:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Có lỗi xảy ra khi xác nhận giấy tờ',
+            error: error.message
+        });
+    }
+};
+
 // CRONJOB: Auto-cancel pending orders older than 6 hours
 // cron.schedule('*/10 * * * *', async () => {
 //     try {
@@ -392,5 +509,7 @@ module.exports = {
     checkoutOrder,
     createRefund,
     completeRefund,
-    getAllRefunds
+    getAllRefunds,
+    getOrderDocuments,
+    validateOrderDocuments
 };

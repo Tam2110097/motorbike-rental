@@ -35,7 +35,9 @@ const {
     checkoutOrder,
     createRefund,
     completeRefund,
-    getAllRefunds
+    getAllRefunds,
+    getOrderDocuments,
+    validateOrderDocuments
 } = require('../controllers/employee-controller/orderManagementCtrl');
 
 // Router object
@@ -111,5 +113,9 @@ router.put('/order/:orderId/checkout', authMiddleware, authorizeRoles('employee'
 router.get('/refund/all', authMiddleware, authorizeRoles('employee'), getAllRefunds);
 router.post('/refund/complete/:refundId', authMiddleware, authorizeRoles('employee'), uploadMiddleware.single('invoiceImage'), completeRefund);
 router.post('/refund/create/:orderId', authMiddleware, authorizeRoles('employee'), createRefund);
+
+// Document validation routes
+router.get('/order/:orderId/documents', authMiddleware, authorizeRoles('employee'), getOrderDocuments);
+router.put('/order/:orderId/validate-documents', authMiddleware, authorizeRoles('employee'), validateOrderDocuments);
 
 module.exports = router;

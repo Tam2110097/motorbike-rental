@@ -3,6 +3,9 @@ const motorbikeTypeModel = require('../models/motorbikeTypeModels');
 const tripContextModel = require('../models/tripContextModels');
 const rentalOrderModel = require('../models/rentalOrderModels');
 
+/**
+ * Tính độ tương đồng giữa hai TripContext dựa trên số lượng thuộc tính trùng nhau.
+ */
 function tripContextSimilarity(tc1, tc2) {
     let score = 0;
     if (tc1.purpose === tc2.purpose) score++;
@@ -17,12 +20,16 @@ function tripContextSimilarity(tc1, tc2) {
     return score;
 }
 
+/**
+ * Gợi ý danh sách motorbikeType dựa trên TripContext gần giống nhất.
+ * Bao gồm logic đánh giá, lọc loại xe có feedback kém và tính điểm đề xuất.
+ */
 async function suggestMotorbikeTypesFromTripContext(tripContext, branchReceiveId) {
-    // 1. Tìm tất cả tripContext từ DB
+    // 1. Lấy toàn bộ TripContext từ DB
     const allTripContexts = await tripContextModel.find({});
     if (allTripContexts.length === 0) return [];
 
-    // 2. Lọc các TripContext có độ tương đồng >= 4
+    // 2. Tìm các TripContext có độ tương đồng ≥ 4
     const similarTripContexts = [];
     for (const tc of allTripContexts) {
         const sim = tripContextSimilarity(tripContext, tc);
@@ -32,16 +39,14 @@ async function suggestMotorbikeTypesFromTripContext(tripContext, branchReceiveId
     }
     if (similarTripContexts.length === 0) return [];
 
-    // 3. Lấy orderId từ các TripContext
+    // 3. Lấy danh sách orderId từ TripContext tương tự
     const orderIds = similarTripContexts.map(tc => tc.orderId);
-
-    // 4. Lấy đơn hàng từ các orderId đó
     const orders = await rentalOrderModel.find({ _id: { $in: orderIds } }).lean();
 
-    // 5. Lấy feedback tương ứng
+    // 4. Join Feedback từ những đơn hàng liên quan
     const feedbacks = await feedbackModel.find({ rentalOrderId: { $in: orderIds } }).lean();
 
-    // 6. Gom dữ liệu từng loại xe
+    // 5. Tổng hợp thống kê số lần sử dụng và tổng điểm đánh giá theo loại xe
     const typeStats = {}; // motorbikeTypeId => { usedCount, totalSatisfaction }
 
     for (const order of orders) {
@@ -59,21 +64,26 @@ async function suggestMotorbikeTypesFromTripContext(tripContext, branchReceiveId
         }
     }
 
-    // 7. Tính điểm score
-    const scoredTypes = Object.entries(typeStats).map(([typeId, stats]) => {
-        const avgSatisfaction = stats.totalSatisfaction / stats.usedCount || 0;
-        const score = stats.usedCount * avgSatisfaction;
-        return { typeId, usedCount: stats.usedCount, avgSatisfaction, score };
-    });
+    // 6. Tính điểm trung bình và điểm đề xuất
+    const MIN_SATISFACTION = 3.0;
+    const scoredTypes = Object.entries(typeStats)
+        .map(([typeId, stats]) => {
+            const avgSatisfaction = stats.totalSatisfaction / stats.usedCount || 0;
+            const score = stats.usedCount * Math.pow(avgSatisfaction, 1.5); // trọng số đánh giá cao hơn
+            return { typeId, usedCount: stats.usedCount, avgSatisfaction, score };
+        })
+        .filter(item => item.avgSatisfaction >= MIN_SATISFACTION); // loại bỏ xe có đánh giá kém
 
-    // 8. Sắp xếp theo score giảm dần
+    if (scoredTypes.length === 0) return [];
+
+    // 7. Sắp xếp theo điểm gợi ý giảm dần
     scoredTypes.sort((a, b) => b.score - a.score);
 
-    // 9. Lấy thông tin MotorbikeType tương ứng
+    // 8. Lấy chi tiết motorbikeType tương ứng
     const typeIds = scoredTypes.map(item => item.typeId);
     const types = await motorbikeTypeModel.find({ _id: { $in: typeIds }, isActive: true }).lean();
 
-    // 10. Gắn điểm vào object
+    // 9. Kết hợp dữ liệu chi tiết với điểm gợi ý
     const result = types.map(type => {
         const scoreData = scoredTypes.find(t => t.typeId === String(type._id));
         return {

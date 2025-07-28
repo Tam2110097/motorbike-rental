@@ -1,5 +1,6 @@
 const express = require('express');
 const authMiddleware = require('../middlewares/authMiddleware');
+const uploadMiddleware = require('../middlewares/uploadMiddleware');
 const {
     getAllBranches,
     getBranchById
@@ -17,7 +18,12 @@ const {
     cancelRentalOrder,
     getCustomerOrderStatistics,
     createOrderFeedback,
-    getOrderFeedback
+    getOrderFeedback,
+    uploadOrderDocuments,
+    getDocumentStatus,
+    getExistingDocuments,
+    testFileAccess,
+    cleanupDuplicateDocuments
 } = require('../controllers/customer-controller/orderCtrl');
 
 //router onject
@@ -52,5 +58,18 @@ router.get('/order/customer/:customerId/statistics', getCustomerOrderStatistics)
 router.post('/order/:orderId/feedback', authMiddleware, createOrderFeedback);
 // Add get feedback route
 router.get('/order/:orderId/feedback', authMiddleware, getOrderFeedback);
+// Upload order documents
+router.post('/order/:orderId/documents', authMiddleware, uploadMiddleware.fields([
+    { name: 'cccdImages', maxCount: 10 },
+    { name: 'driverLicenseImages', maxCount: 10 }
+]), uploadOrderDocuments);
+// Get document status
+router.get('/order/:orderId/documents/status', authMiddleware, getDocumentStatus);
+// Get existing documents
+router.get('/order/:orderId/documents', authMiddleware, getExistingDocuments);
+// Test file access
+router.get('/test-file-access', testFileAccess);
+// Clean up duplicate documents
+router.delete('/order/:orderId/documents', authMiddleware, cleanupDuplicateDocuments);
 
 module.exports = router;
