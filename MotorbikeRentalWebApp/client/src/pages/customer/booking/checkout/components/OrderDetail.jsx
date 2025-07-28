@@ -56,11 +56,25 @@ const OrderDetail = () => {
     const formatPrice = (price) =>
         new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
 
+    // const startDateTime = dayjs(`${bookingData.startDate}T${bookingData.startTime}`);
+    //     const endDateTime = dayjs(`${bookingData.endDate}T${bookingData.endTime}`);
+
+    //     const durationInDays = endDateTime.diff(startDateTime, 'day', true); // tính số ngày có phần thập phân
+    //     const roundedDuration = Math.ceil(durationInDays); // làm tròn lên
+
+    //     return roundedDuration <= 0 ? 1 : roundedDuration;
+
     // Calculate rental days using only date part
-    const startDateOnly = dayjs(bookingData.startDate).startOf('day');
-    const endDateOnly = dayjs(bookingData.endDate).startOf('day');
-    const durationDays = endDateOnly.diff(startDateOnly, 'day') + 1;
-    const rentalDays = durationDays <= 0 ? 1 : durationDays;
+    // const startDateOnly = dayjs(bookingData.startDate).startOf('day');
+    // const endDateOnly = dayjs(bookingData.endDate).startOf('day');
+    // const durationDays = endDateOnly.diff(startDateOnly, 'day') + 1;
+    // const rentalDays = durationDays <= 0 ? 1 : durationDays;
+
+    const startDateOnly = dayjs(`${bookingData.startDate}T${bookingData.startTime}`);
+    const endDateOnly = dayjs(`${bookingData.endDate}T${bookingData.endTime}`);
+    const durationDays = endDateOnly.diff(startDateOnly, 'day', true);
+    const roundedDuration = Math.ceil(durationDays);
+    const rentalDays = roundedDuration <= 0 ? 1 : roundedDuration;
 
     const isSameBranch = bookingData.startBranch === bookingData.endBranch;
 

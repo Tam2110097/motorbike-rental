@@ -9,9 +9,11 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [recommendations, setRecommendations] = useState([]);
+    const [fallback, setFallback] = useState(false);
 
     useEffect(() => {
         if (!tripContext || !branchReceiveId) return;
+        setFallback(false);
         console.log('RecommendationMotorbikeType: tripContext', tripContext);
         console.log('RecommendationMotorbikeType: branchReceiveId', branchReceiveId);
         const fetchRecommendations = async () => {
@@ -22,11 +24,20 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                     tripContext,
                     branchReceiveId
                 });
-                if (res.data.success) {
-                    setRecommendations(res.data.data || []);
-                    console.log('RecommendationMotorbikeType: recommendations', res.data.data || []);
+                if (res.data.success && res.data.data && res.data.data.length > 0) {
+                    setRecommendations(res.data.data);
+                    setFallback(false);
+                    console.log('RecommendationMotorbikeType: recommendations', res.data.data);
                 } else {
-                    setError(res.data.message || 'Không thể lấy gợi ý');
+                    // Fallback: fetch top 3 popular motorbike types
+                    const fallbackRes = await axios.get(`http://localhost:8080/api/v1/recommendation/top-popular?branchReceiveId=${branchReceiveId}`);
+                    if (fallbackRes.data.success && fallbackRes.data.data && fallbackRes.data.data.length > 0) {
+                        setRecommendations(fallbackRes.data.data);
+                        setFallback(true);
+                    } else {
+                        setRecommendations([]);
+                        setFallback(true);
+                    }
                 }
             } catch {
                 setError('Lỗi khi lấy gợi ý xe');
@@ -40,9 +51,29 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
 
     if (!tripContext || !branchReceiveId) return null;
 
+    // Calculate summary stats for recommendations (if not fallback)
+    let summary = null;
+    if (!fallback && recommendations.length > 0) {
+        // Calculate total usedCount and weighted avgSatisfaction
+        const totalUsed = recommendations.reduce((sum, t) => sum + (t.usedCount || 0), 0);
+        const totalScore = recommendations.reduce((sum, t) => sum + ((t.avgSatisfaction || 0) * (t.usedCount || 0)), 0);
+        const avgRating = totalUsed > 0 ? (totalScore / totalUsed) : 0;
+        // Assume "liked" means avgSatisfaction >= 4
+        const likedCount = recommendations.filter(t => (t.avgSatisfaction || 0) >= 4).reduce((sum, t) => sum + (t.usedCount || 0), 0);
+        const percentLiked = totalUsed > 0 ? Math.round((likedCount / totalUsed) * 100) : 0;
+        summary = `${percentLiked}% khách hàng hài lòng, đánh giá trung bình ${avgRating.toFixed(1)}★`;
+    }
+
     return (
         <div style={{ margin: '24px 0' }}>
-            <Title level={4} style={{ marginBottom: 16 }}>Gợi ý loại xe phù hợp</Title>
+            <Title level={3} style={{ marginBottom: 12, color: '#1890ff' }}>
+                {fallback ? 'Top 3 xe phổ biến nhất tại chi nhánh' : 'Gợi ý loại xe phù hợp'}
+            </Title>
+            {!fallback && summary && (
+                <div style={{ marginBottom: 16, fontSize: 16, color: '#faad14', fontWeight: 500 }}>
+                    {summary}
+                </div>
+            )}
             {loading ? (
                 <Spin />
             ) : error ? (
@@ -83,8 +114,8 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                                 e.target.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN'
                                             }}
                                         />
-                                        <Tag color="purple" style={{ position: 'absolute', top: 8, right: 8, fontSize: 12, fontWeight: 'bold' }}>
-                                            Đề xuất
+                                        <Tag color={fallback ? 'gold' : 'purple'} style={{ position: 'absolute', top: 8, right: 8, fontSize: 12, fontWeight: 'bold' }}>
+                                            {fallback ? 'Phổ biến' : 'Đề xuất'}
                                         </Tag>
                                     </div>
                                 }
@@ -102,8 +133,12 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                     title={
                                         <div>
                                             <Title level={4} style={{ margin: 0, color: '#1890ff' }}>{type.name}</Title>
+                                            <div style={{ fontSize: 15, color: '#faad14', fontWeight: 500, margin: '4px 0' }}>
+                                                {type.avgSatisfaction ? `${type.avgSatisfaction.toFixed(1)}★` : '-'}
+                                                {type.usedCount ? ` | ${type.usedCount} lượt thuê` : ''}
+                                            </div>
                                             <Tag color="blue" style={{ marginTop: 4 }}>
-                                                {type.availableCount !== undefined ? `${type.availableCount} xe có sẵn` : 'Đề xuất'}
+                                                {type.availableCount !== undefined ? `${type.availableCount} xe có sẵn` : (fallback ? 'Phổ biến' : 'Đề xuất')}
                                             </Tag>
                                         </div>
                                     }

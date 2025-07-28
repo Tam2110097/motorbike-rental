@@ -46,6 +46,7 @@ import ConfirmBikeModel from './pages/customer/booking/confirm/ConfirmBikeModel'
 import OrderReviewPage from './pages/customer/booking/order-review/OrderReviewPage'
 import CheckoutPage from './pages/customer/booking/checkout/CheckoutPage'
 import MyOrderPage from './pages/customer/order/MyOrderPage'
+import DocumentUploadPage from './pages/customer/order/DocumentUploadPage'
 import NotAllowed from './pages/NotAllowed';
 import PaymentPage from './pages/customer/order/PaymentPage'
 import OrderPage from './pages/employee/order/OrderPage'
@@ -282,6 +283,7 @@ function App() {
             } />
           <Route path='/order/my-order' element={<MyOrderPage />} />
           <Route path='/order/my-order/:id' element={<PaymentPage />} />
+          <Route path='/order/documents/:orderId' element={<DocumentUploadPage />} />
           <Route path='/order/rate/:id' element={<RateOrderPage />} />
         </Routes>
       </BrowserRouter >

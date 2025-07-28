@@ -14,10 +14,18 @@ const CartsTotal = () => {
         new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
 
     const calculateDuration = () => {
+        // const startDateTime = dayjs(`${bookingData.startDate}T${bookingData.startTime}`);
+        // const endDateTime = dayjs(`${bookingData.endDate}T${bookingData.endTime}`);
+        // const durationDays = endDateTime.diff(startDateTime, 'day', true); // tính số ngày (có thể là số thập phân)
+        // return Math.ceil(durationDays <= 0 ? 1 : durationDays); // tối thiểu là 1
+
         const startDateTime = dayjs(`${bookingData.startDate}T${bookingData.startTime}`);
         const endDateTime = dayjs(`${bookingData.endDate}T${bookingData.endTime}`);
-        const durationDays = endDateTime.diff(startDateTime, 'day', true); // tính số ngày (có thể là số thập phân)
-        return Math.ceil(durationDays <= 0 ? 1 : durationDays); // tối thiểu là 1
+
+        const durationInDays = endDateTime.diff(startDateTime, 'day', true); // tính số ngày có phần thập phân
+        const roundedDuration = Math.ceil(durationInDays); // làm tròn lên
+
+        return roundedDuration <= 0 ? 1 : roundedDuration;
     }
 
     const rentalDuration = calculateDuration()

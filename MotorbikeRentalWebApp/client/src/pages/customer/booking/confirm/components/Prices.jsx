@@ -14,11 +14,19 @@ const Prices = () => {
         new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
 
     const calculateDuration = () => {
-        const startDateOnly = dayjs(bookingData.startDate).startOf('day');
-        const endDateOnly = dayjs(bookingData.endDate).startOf('day');
-        const durationDays = endDateOnly.diff(startDateOnly, 'day') + 1;
-        return durationDays <= 0 ? 1 : durationDays;
+        // const startDateOnly = dayjs(bookingData.startDate).startOf('day');
+        // const endDateOnly = dayjs(bookingData.endDate).startOf('day');
+        // const durationDays = endDateOnly.diff(startDateOnly, 'day') + 1;
+        // return durationDays <= 0 ? 1 : durationDays;
         // tối thiểu là 1
+
+        const startDateTime = dayjs(`${bookingData.startDate}T${bookingData.startTime}`);
+        const endDateTime = dayjs(`${bookingData.endDate}T${bookingData.endTime}`);
+
+        const durationInDays = endDateTime.diff(startDateTime, 'day', true); // tính số ngày có phần thập phân
+        const roundedDuration = Math.ceil(durationInDays); // làm tròn lên
+
+        return roundedDuration <= 0 ? 1 : roundedDuration;
     }
 
     const rentalDuration = calculateDuration()

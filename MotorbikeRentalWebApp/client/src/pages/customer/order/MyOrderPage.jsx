@@ -17,6 +17,7 @@ const MyOrderPage = () => {
     const [motorbikeDetails, setMotorbikeDetails] = useState([]);
     const [accessoryDetails, setAccessoryDetails] = useState([]);
     const [feedbacks, setFeedbacks] = useState({}); // { [orderId]: feedback }
+    const [documentStatus, setDocumentStatus] = useState({}); // { [orderId]: isCompleted }
     const navigate = useNavigate();
     const location = useLocation();
     const searchParams = queryString.parse(location.search);
@@ -76,6 +77,27 @@ const MyOrderPage = () => {
                         } catch { /* ignore feedback fetch error */ }
                     }));
                     setFeedbacks(feedbackResults);
+
+                    // Fetch document status for pending orders
+                    const pendingOrders = (data.rentalOrders || []).filter(o => o.status === 'pending');
+                    const documentResults = {};
+                    await Promise.all(pendingOrders.map(async (order) => {
+                        try {
+                            const resDoc = await fetch(`http://localhost:8080/api/v1/customer/order/${order._id}/documents/status`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (resDoc.ok) {
+                                const docData = await resDoc.json();
+                                if (docData.success) {
+                                    documentResults[order._id] = docData.isCompleted || false;
+                                }
+                            }
+                        } catch {
+                            // If document status endpoint doesn't exist, assume not completed
+                            documentResults[order._id] = false;
+                        }
+                    }));
+                    setDocumentStatus(documentResults);
                 } else {
                     setError(data.message || 'Không thể lấy danh sách đơn hàng.');
                 }
@@ -150,18 +172,48 @@ const MyOrderPage = () => {
             render: (_, record) => {
                 const actions = [];
                 if (record.status === 'pending') {
+                    // Check if documents are uploaded
+                    const isDocumentsCompleted = documentStatus[record._id];
+
                     actions.push(
                         <Button
-                            key="pay"
-                            style={{ background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)', color: 'white', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 600, minWidth: 180, marginBottom: 8 }}
+                            key="documents"
+                            style={{
+                                background: isDocumentsCompleted
+                                    ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
+                                    : 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 6,
+                                padding: '6px 16px',
+                                fontWeight: 600,
+                                minWidth: 180,
+                                marginBottom: 8
+                            }}
                             onClick={() => {
-                                navigate(`/order/my-order/${record._id}`);
+                                navigate(`/order/documents/${record._id}`);
                             }}
                             block
                         >
-                            Thanh toán phí đặt trước
+                            {isDocumentsCompleted ? 'Xem hình ảnh giấy tờ' : 'Cung cấp hình ảnh giấy tờ'}
                         </Button>
                     );
+
+                    // Only show payment button if documents are completed
+                    if (isDocumentsCompleted) {
+                        actions.push(
+                            <Button
+                                key="pay"
+                                style={{ background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)', color: 'white', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 600, minWidth: 180, marginBottom: 8 }}
+                                onClick={() => {
+                                    navigate(`/order/my-order/${record._id}`);
+                                }}
+                                block
+                            >
+                                Thanh toán phí đặt trước
+                            </Button>
+                        );
+                    }
                 } else if (record.status === 'confirmed') {
                     actions.push(
                         <Button
@@ -269,7 +321,9 @@ const MyOrderPage = () => {
                 }
             );
             const data = await res.json();
+            console.log('Order detail response:', data);
             if (data.success && data.rentalOrder) {
+                console.log('Rental order motorbikes:', data.rentalOrder.motorbikes);
                 setOrderDetail(data.rentalOrder);
                 setMotorbikeDetails(data.motorbikeDetails || []);
                 setAccessoryDetails(data.accessoryDetails || []);
@@ -321,6 +375,9 @@ const MyOrderPage = () => {
                 >
                     {orderDetail && (
                         <div style={{ lineHeight: 2 }}>
+                            {/* <div style={{ marginBottom: '16px', padding: '8px', background: '#f0f0f0', borderRadius: '4px' }}>
+                                Debug: Order has {orderDetail.motorbikes?.length || 0} motorbikes
+                            </div> */}
                             <div><b>Mã đơn:</b> {orderDetail.orderCode}</div>
                             <div><b>Trạng thái:</b> <Tag color={
                                 orderDetail.status === 'pending' ? 'orange' :
@@ -350,6 +407,51 @@ const MyOrderPage = () => {
                                         columns={[
                                             { title: 'Tên xe', dataIndex: ['motorbikeTypeId', 'name'], key: 'type', render: (_, r) => r.motorbikeTypeId?.name || '-' },
                                             { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity' },
+                                            {
+                                                title: 'Mã xe',
+                                                key: 'motorbikeCodes',
+                                                render: (_, r) => {
+                                                    console.log('Rendering motorbike codes for:', r);
+                                                    console.log('Order detail motorbikes:', orderDetail?.motorbikes);
+
+                                                    // Find the actual motorbikes for this motorbike type in the order
+                                                    const orderMotorbikes = orderDetail?.motorbikes || [];
+                                                    console.log('Comparing:', {
+                                                        detailTypeId: r.motorbikeTypeId._id,
+                                                        orderMotorbikes: orderMotorbikes.map(mb => mb.motorbikeTypeId._id)
+                                                    });
+
+                                                    const typeMotorbikes = orderMotorbikes.filter(mb =>
+                                                        mb.motorbikeTypeId._id === r.motorbikeTypeId._id
+                                                    );
+
+                                                    console.log('Type motorbikes found:', typeMotorbikes);
+
+                                                    if (typeMotorbikes.length > 0) {
+                                                        return (
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                                {typeMotorbikes.map((mb, index) => (
+                                                                    <span
+                                                                        key={index}
+                                                                        style={{
+                                                                            background: '#e8f5e8',
+                                                                            color: '#2d5a2d',
+                                                                            padding: '2px 6px',
+                                                                            borderRadius: '4px',
+                                                                            fontSize: '12px',
+                                                                            fontWeight: '600',
+                                                                            border: '1px solid #b7eb8f'
+                                                                        }}
+                                                                    >
+                                                                        {mb.motorbikeId?.code || `MB${String(index + 1).padStart(3, '0')}`}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return '-';
+                                                }
+                                            },
                                             { title: 'Đơn giá', dataIndex: 'unitPrice', key: 'unitPrice', render: v => v?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) },
                                             { title: 'Miễn trừ thiệt hại', dataIndex: 'damageWaiverFee', key: 'damageWaiverFee', render: v => v ? v.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '-' },
                                             {
@@ -367,7 +469,10 @@ const MyOrderPage = () => {
                                                         endTime = dayjs(orderDetail.returnDate);
                                                     }
                                                     if (startTime.isValid() && endTime.isValid()) {
-                                                        duration = endTime.diff(startTime, 'day') + 1;
+                                                        // duration = endTime.diff(startTime, 'day') + 1;
+                                                        const durationInDays = endTime.diff(startTime, 'day', true);
+                                                        const roundedDuration = Math.ceil(durationInDays);
+                                                        duration = roundedDuration <= 0 ? 1 : roundedDuration;
                                                     } else {
                                                         duration = 1;
                                                     }

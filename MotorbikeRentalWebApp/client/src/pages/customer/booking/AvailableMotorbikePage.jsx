@@ -173,18 +173,28 @@ const AvailableMotorbikePage = () => {
                                 Tại {branchName}
                             </Text>
                         )}
-                        {(bookingData.tripContext && bookingData.startBranch &&
-                            bookingData.tripContext.purpose &&
-                            bookingData.tripContext.distanceCategory &&
-                            bookingData.tripContext.numPeople &&
-                            bookingData.tripContext.terrain &&
-                            bookingData.tripContext.luggage &&
-                            Array.isArray(bookingData.tripContext.preferredFeatures)) && (
+                    </div>
+
+                    {/* Recommendation Section */}
+                    {(bookingData.tripContext && bookingData.startBranch &&
+                        bookingData.tripContext.purpose &&
+                        bookingData.tripContext.distanceCategory &&
+                        bookingData.tripContext.numPeople &&
+                        bookingData.tripContext.terrain &&
+                        bookingData.tripContext.luggage &&
+                        Array.isArray(bookingData.tripContext.preferredFeatures)) && (
+                            <div style={{ marginBottom: 32 }}>
+                                {/* <Title level={3} style={{ marginBottom: 12, color: '#1890ff' }}>Gợi ý loại xe phù hợp</Title> */}
                                 <RecommendationMotorbikeType
                                     tripContext={bookingData.tripContext}
                                     branchReceiveId={bookingData.startBranch}
                                 />
-                            )}
+                            </div>
+                        )}
+
+                    {/* Available Motorbikes Section */}
+                    <div style={{ marginBottom: 16 }}>
+                        <Title level={3} style={{ marginBottom: 12, color: '#52c41a' }}>Xe máy có sẵn</Title>
                     </div>
 
                     {motorbikeTypes.length === 0 ? (
