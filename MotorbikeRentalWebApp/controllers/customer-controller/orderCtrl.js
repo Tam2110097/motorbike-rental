@@ -193,7 +193,8 @@ const createRentalOrder = async (req, res) => {
             const formatted = selected.map(mb => ({
                 motorbikeId: mb._id,
                 motorbikeTypeId: typeId,
-                quantity: 1
+                quantity: 1,
+                hasDamageWaiver: detail.hasDamageWaiver || false // Include damage waiver status
             }));
             selectedMotorbikes.push(...formatted);
         }

@@ -125,7 +125,8 @@ const CheckoutPage = () => {
                     motorbikeTypeId: item.motorbikeType._id,
                     quantity: item.quantity,
                     unitPrice,
-                    damageWaiverFee
+                    damageWaiverFee,
+                    hasDamageWaiver: item.hasDamageWaiver // Include damage waiver status
                 };
             });
 

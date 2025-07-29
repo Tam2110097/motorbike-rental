@@ -22,9 +22,9 @@ export const employeeMenu = [
         label: "Quản lý xe máy"
     },
     {
-        path: "/employee/rented-motorbike",
+        path: "/employee/maintenance",
         icon: NotificationOutlined,
-        label: "Xe đang được thuê",
+        label: "Quản lý bảo trì",
     },
     {
         path: "/employee/order",

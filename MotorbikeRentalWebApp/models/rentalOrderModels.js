@@ -86,6 +86,10 @@ const rentalOrderSchema = new mongoose.Schema({
         type: String,
         required: [true, 'receiveAddress is required']
     },
+    additionalFee: {
+        type: Number,
+        default: 0
+    },
     createdAt: {
         type: Date,
         default: Date.now

@@ -11,6 +11,17 @@ const orderDocumentModel = require('../../models/orderDocumentModels');
 const dayjs = require('dayjs');
 const cron = require('node-cron');
 
+// Helper function to format refund reason
+const formatRefundReason = (remainingDays, remainingHours) => {
+    if (remainingDays > 0 && remainingHours > 0) {
+        return `Trả xe sớm - Còn lại ${remainingDays} ngày ${remainingHours} giờ`;
+    } else if (remainingDays > 0) {
+        return `Trả xe sớm - Còn lại ${remainingDays} ngày`;
+    } else {
+        return 'Trả xe sớm';
+    }
+};
+
 // Get all rental orders (for employees)
 const getAllOrders = async (req, res) => {
     try {
@@ -218,9 +229,13 @@ const checkoutOrder = async (req, res) => {
         if (order.status !== 'active') {
             return res.status(400).json({ success: false, message: 'Chỉ có thể checkout đơn hàng ở trạng thái Đang sử dụng.' });
         }
+
+        // Set checkout time to current time
+        const checkoutTime = new Date();
         order.status = 'completed';
-        order.checkOutDate = new Date();
+        order.checkOutDate = checkoutTime;
         await order.save();
+
         // Update all motorbikes in this order to 'available' and transfer branch
         if (order.motorbikes && order.motorbikes.length > 0) {
             await Promise.all(order.motorbikes.map(async (mb) => {
@@ -230,38 +245,111 @@ const checkoutOrder = async (req, res) => {
                 });
             }));
         }
-        // --- Refactored Refund logic for early checkout ---
+
+        // --- Enhanced Refund logic for early checkout with precise time calculation ---
         const plannedReturn = dayjs(order.returnDate);
-        const actualCheckout = dayjs(order.checkOutDate);
+        const actualCheckout = dayjs(checkoutTime);
         const receiveDate = dayjs(order.receiveDate);
-        if (actualCheckout.isBefore(plannedReturn, 'day')) {
-            // Calculate refund amount based on unused days and damage waiver
-            const usedDays = actualCheckout.diff(receiveDate, 'day');
-            const plannedDays = plannedReturn.diff(receiveDate, 'day');
-            const refundDays = plannedDays - usedDays;
+
+        // Calculate remaining time in hours
+        const remainingHours = plannedReturn.diff(actualCheckout, 'hour', true);
+        const remainingDays = Math.floor(remainingHours / 24);
+        const remainingHoursInDay = remainingHours % 24;
+
+        console.log('Checkout Analysis:', {
+            plannedReturn: plannedReturn.format('YYYY-MM-DD HH:mm:ss'),
+            actualCheckout: actualCheckout.format('YYYY-MM-DD HH:mm:ss'),
+            receiveDate: receiveDate.format('YYYY-MM-DD HH:mm:ss'),
+            remainingHours: remainingHours,
+            remainingDays: remainingDays,
+            remainingHoursInDay: remainingHoursInDay
+        });
+
+        // Only create refund if there's at least 1 full day remaining
+        if (actualCheckout.isBefore(plannedReturn) && remainingDays >= 1) {
+            console.log('Creating refund for early checkout with', remainingDays, 'full days remaining');
+
+            // Calculate refund amount based on full days only (no partial day refunds)
             let amount = 0;
+
             // Get motorbike details for this order
             const motorbikeDetails = await rentalOrderMotorbikeDetailModel.find({ rentalOrderId: orderId });
+
+            console.log('Motorbike details for refund calculation:', motorbikeDetails.length, 'items');
+
             for (const mb of motorbikeDetails) {
                 const unitPrice = mb.unitPrice || 0;
                 const waiver = mb.damageWaiverFee || 0;
-                amount += (unitPrice + waiver) * mb.quantity * refundDays;
+                const itemAmount = (unitPrice + waiver) * mb.quantity * remainingDays;
+                amount += itemAmount;
+
+                console.log('Refund calculation for item:', {
+                    unitPrice,
+                    waiver,
+                    quantity: mb.quantity,
+                    remainingDays,
+                    itemAmount
+                });
             }
+
             // Find payment for this order
             const payment = await paymentModel.findOne({ rentalOrderId: orderId });
             if (payment && amount > 0) {
-                await refundModel.create({
+                const refund = await refundModel.create({
                     amount,
-                    reason: 'Trả xe sớm',
+                    reason: formatRefundReason(remainingDays, remainingHoursInDay),
                     status: 'pending',
                     paymentId: payment._id,
                     processedBy: userId,
                     invoiceImage: ''
                 });
+
+                console.log('Refund created successfully:', {
+                    refundId: refund._id,
+                    amount: amount,
+                    remainingDays: remainingDays,
+                    remainingHours: remainingHoursInDay,
+                    reason: refund.reason
+                });
+
+                res.status(200).json({
+                    success: true,
+                    message: `Checkout thành công! Đơn hàng đã hoàn thành, xe máy đã chuyển về chi nhánh trả. Hoàn tiền: ${amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })} cho ${remainingDays} ngày còn lại.`,
+                    refund: {
+                        amount: amount,
+                        remainingDays: remainingDays,
+                        remainingHours: Math.floor(remainingHoursInDay)
+                    }
+                });
+            } else {
+                console.log('No payment found or amount is 0:', { payment: !!payment, amount });
+                res.status(200).json({
+                    success: true,
+                    message: 'Checkout thành công! Đơn hàng đã hoàn thành, xe máy đã chuyển về chi nhánh trả. Không có hoàn tiền do không tìm thấy thanh toán hoặc số tiền hoàn tiền bằng 0.',
+                    refund: null
+                });
             }
+        } else {
+            // No refund - either no early checkout or less than 1 full day remaining
+            const message = remainingDays < 1 && remainingHours > 0
+                ? 'Checkout thành công! Không có hoàn tiền do thời gian còn lại không đủ 1 ngày đầy đủ.'
+                : 'Checkout thành công! Đơn hàng đã hoàn thành, xe máy đã chuyển về chi nhánh trả.';
+
+            console.log('No refund created:', {
+                isEarlyCheckout: actualCheckout.isBefore(plannedReturn),
+                remainingDays,
+                remainingHours,
+                reason: remainingDays < 1 ? 'Less than 1 full day' : 'No early checkout'
+            });
+
+            res.status(200).json({
+                success: true,
+                message: message,
+                refund: null
+            });
         }
-        res.status(200).json({ success: true, message: 'Checkout thành công, đơn hàng đã hoàn thành, xe máy đã chuyển về chi nhánh trả.' });
     } catch (error) {
+        console.error('Checkout error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -281,15 +369,33 @@ const createRefund = async (req, res) => {
         // Kiểm tra nhận/trả cùng chi nhánh
         const isSameBranch = String(order.branchReceive) === String(order.branchReturn);
 
+        // Calculate remaining time in hours
+        const plannedReturn = dayjs(order.returnDate);
+        const today = dayjs();
+        const remainingHours = plannedReturn.diff(today, 'hour', true);
+        const remainingDays = Math.floor(remainingHours / 24);
+        const remainingHoursInDay = remainingHours % 24;
+
+        console.log('Refund Analysis:', {
+            plannedReturn: plannedReturn.format('YYYY-MM-DD HH:mm:ss'),
+            today: today.format('YYYY-MM-DD HH:mm:ss'),
+            remainingHours: remainingHours,
+            remainingDays: remainingDays,
+            remainingHoursInDay: remainingHoursInDay
+        });
+
+        // Only create refund if there's at least 1 full day remaining
+        if (remainingDays < 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Không thể tạo hoàn tiền do thời gian còn lại không đủ 1 ngày đầy đủ.'
+            });
+        }
+
         let totalRefundAmount = 0;
 
         const receiveDate = dayjs(order.receiveDate);     // Ngày bắt đầu thuê
         const returnDate = dayjs(order.returnDate);       // Ngày dự kiến trả
-        const today = dayjs();                            // Ngày thực tế trả
-
-        const totalDays = returnDate.diff(receiveDate, 'day');  // Tổng ngày thuê
-        const usedDays = today.diff(receiveDate, 'day');        // Số ngày đã sử dụng
-        const remainingDays = Math.max(returnDate.diff(today, 'day'), 0);  // Ngày còn lại
 
         for (const mb of order.motorbikes) {
             const motorbikeType = mb.motorbikeTypeId;
@@ -301,11 +407,14 @@ const createRefund = async (req, res) => {
             const discountPrice = basePrice * (1 - rule.discountPercent / 100);
             const discountStartDay = rule.discountDay;
 
+            // Calculate used days
+            const usedDays = today.diff(receiveDate, 'day');
             const refundStartDay = usedDays + 1;
 
             let normalDays = 0;
             let discountedDays = 0;
 
+            // Only calculate for full days
             for (let i = 0; i < remainingDays; i++) {
                 const dayIndex = refundStartDay + i;
                 if (dayIndex >= discountStartDay) {
@@ -316,7 +425,6 @@ const createRefund = async (req, res) => {
             }
 
             const refundAmount = (normalDays * basePrice + discountedDays * discountPrice) * mb.quantity;
-
             totalRefundAmount += refundAmount;
         }
 
@@ -329,14 +437,27 @@ const createRefund = async (req, res) => {
         // Tạo bản ghi hoàn tiền
         const refund = await refundModel.create({
             amount: totalRefundAmount,
-            reason: 'Trả xe sớm',
+            reason: formatRefundReason(remainingDays, remainingHoursInDay),
             status: 'pending',
             paymentId: payment._id,
             processedBy: userId,
             invoiceImage: ''
         });
 
-        res.status(201).json({ success: true, refund });
+        console.log('Refund created:', {
+            amount: totalRefundAmount,
+            remainingDays: remainingDays,
+            remainingHours: remainingHoursInDay
+        });
+
+        res.status(201).json({
+            success: true,
+            refund: {
+                ...refund.toObject(),
+                remainingDays: remainingDays,
+                remainingHours: Math.floor(remainingHoursInDay)
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: error.message });

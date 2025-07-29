@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Tag, Upload, Button, message, Spin, Modal } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
+import { useLocation } from 'react-router-dom';
 
 const statusMap = {
     pending: { color: 'orange', label: 'Chờ hoàn tiền' },
@@ -10,6 +11,7 @@ const statusMap = {
 };
 
 const RefundPage = () => {
+    const location = useLocation();
     const [refunds, setRefunds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
@@ -18,6 +20,7 @@ const RefundPage = () => {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [completing, setCompleting] = useState(false);
     const [orderCodes, setOrderCodes] = useState({});
+    const [highlightedRefund, setHighlightedRefund] = useState(null);
 
     useEffect(() => {
         const fetchRefunds = async () => {
@@ -30,6 +33,18 @@ const RefundPage = () => {
                 const data = await res.json();
                 if (data.success) {
                     setRefunds(data.refunds || []);
+
+                    // Check if we should highlight a specific refund (from order page navigation)
+                    if (location.state?.highlightOrderId) {
+                        const targetRefund = data.refunds?.find(r =>
+                            r.paymentId?.rentalOrderId === location.state.highlightOrderId
+                        );
+                        if (targetRefund) {
+                            setHighlightedRefund(targetRefund._id);
+                            setTimeout(() => setHighlightedRefund(null), 2000);
+                        }
+                    }
+
                     // Fetch order codes for all refunds
                     const orderIds = (data.refunds || []).map(r => r.paymentId?.rentalOrderId).filter(Boolean);
                     const uniqueOrderIds = Array.from(new Set(orderIds));
@@ -54,7 +69,7 @@ const RefundPage = () => {
             }
         };
         fetchRefunds();
-    }, []);
+    }, [location.state]);
 
     const handleUploadChange = info => {
         setFileList(info.fileList.slice(-1));
@@ -124,9 +139,29 @@ const RefundPage = () => {
 
     return (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
+            <style>
+                {`
+                    @keyframes highlight {
+                        0% { background-color: #fff2e8; }
+                        50% { background-color: #ff4d4f; }
+                        100% { background-color: #fff2e8; }
+                    }
+                    
+                    .highlighted-refund-row {
+                        background-color: #fff2e8 !important;
+                        animation: highlight 2s ease-in-out;
+                    }
+                `}
+            </style>
             <h1 style={{ textAlign: 'center', marginBottom: 24 }}>Quản lý hoàn tiền</h1>
             {loading ? <Spin size="large" style={{ display: 'block', margin: '60px auto' }} /> : (
-                <Table columns={columns} dataSource={refunds} rowKey="_id" bordered />
+                <Table
+                    columns={columns}
+                    dataSource={refunds}
+                    rowKey="_id"
+                    bordered
+                    rowClassName={(record) => highlightedRefund === record._id ? 'highlighted-refund-row' : ''}
+                />
             )}
             <Modal
                 title="Cập nhật chuyển khoản hoàn tiền"

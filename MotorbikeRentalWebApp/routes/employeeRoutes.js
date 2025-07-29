@@ -40,6 +40,14 @@ const {
     validateOrderDocuments
 } = require('../controllers/employee-controller/orderManagementCtrl');
 
+const {
+    getMaintenanceLevels,
+    getOrderMotorbikesForMaintenance,
+    createMaintenanceForOrder,
+    getAllMaintenance,
+    completeMaintenance
+} = require('../controllers/employee-controller/maintenanceCtrl');
+
 // Router object
 const router = express.Router();
 
@@ -117,5 +125,23 @@ router.post('/refund/create/:orderId', authMiddleware, authorizeRoles('employee'
 // Document validation routes
 router.get('/order/:orderId/documents', authMiddleware, authorizeRoles('employee'), getOrderDocuments);
 router.put('/order/:orderId/validate-documents', authMiddleware, authorizeRoles('employee'), validateOrderDocuments);
+
+/*
+**************EMPLOYEE ROUTE MAINTENANCE**************
+*/
+// Get maintenance levels configuration
+router.get('/maintenance/levels', authMiddleware, authorizeRoles('employee'), getMaintenanceLevels);
+
+// Get motorbikes from completed order for maintenance selection
+router.get('/maintenance/order/:orderId/motorbikes', authMiddleware, authorizeRoles('employee'), getOrderMotorbikesForMaintenance);
+
+// Create maintenance records for motorbikes
+router.post('/maintenance/order/:orderId/create', authMiddleware, authorizeRoles('employee'), uploadMiddleware.array('images', 10), createMaintenanceForOrder);
+
+// Get all maintenance records
+router.get('/maintenance/all', authMiddleware, authorizeRoles('employee'), getAllMaintenance);
+
+// Complete maintenance
+router.put('/maintenance/:maintenanceId/complete', authMiddleware, authorizeRoles('employee'), completeMaintenance);
 
 module.exports = router;

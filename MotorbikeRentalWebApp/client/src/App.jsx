@@ -53,6 +53,7 @@ import OrderPage from './pages/employee/order/OrderPage'
 import InvoicePage from './pages/employee/order/InvoicePage'
 import RefundPage from './pages/employee/order/RefundPage'
 import RateOrderPage from './pages/customer/order/RateOrderPage'
+import MaintenancePage from './pages/employee/maintenance/MaintenancePage'
 
 function App() {
 
@@ -249,6 +250,12 @@ function App() {
           <Route path='/employee/refund' element={
             <ProtectedRoute allowedRoles={["employee"]}>
               <RefundPage />
+            </ProtectedRoute>
+          } />
+          {/* ====employee-maintenance==== */}
+          <Route path='/employee/maintenance' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <MaintenancePage />
             </ProtectedRoute>
           } />
           {/* ====customer==== */}

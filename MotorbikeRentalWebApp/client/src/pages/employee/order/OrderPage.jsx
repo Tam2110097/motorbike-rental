@@ -1,9 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Table, Card, Button, Tag, message, Spin, Row, Col, Modal, Tabs } from 'antd';
+import { Table, Card, Button, Tag, message, Spin, Row, Col, Modal, Tabs, Select, Input, Typography, Upload } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Table as AntTable } from 'antd';
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
 
 const statusMap = {
     pending: { label: 'Chờ thanh toán', color: 'orange' },
@@ -14,6 +18,22 @@ const statusMap = {
 };
 
 const statusOrder = ['pending', 'confirmed', 'active', 'completed', 'cancelled'];
+
+// Utility function to calculate remaining time for refund
+const calculateRemainingTime = (returnDate) => {
+    const now = dayjs();
+    const plannedReturn = dayjs(returnDate);
+    const remainingHours = plannedReturn.diff(now, 'hour', true);
+    const remainingDays = Math.floor(remainingHours / 24);
+    const remainingHoursInDay = remainingHours % 24;
+
+    return {
+        remainingHours,
+        remainingDays,
+        remainingHoursInDay: Math.floor(remainingHoursInDay),
+        canRefund: remainingDays >= 1
+    };
+};
 
 // Add a countdown component
 const RentalCountdown = ({ returnDate }) => {
@@ -29,12 +49,12 @@ const RentalCountdown = ({ returnDate }) => {
     if (remaining < 0) remaining = 0;
     const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
     const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
-    // const minutes = Math.floor((remaining / (1000 * 60)) % 60);
-    // const seconds = Math.floor((remaining / 1000) % 60);
+    const minutes = Math.floor((remaining / (1000 * 60)) % 60);
+    const seconds = Math.floor((remaining / 1000) % 60);
+
     return (
         <div style={{ color: remaining === 0 ? 'red' : '#1890ff', fontWeight: 500, marginBottom: 8 }}>
-            {/* {remaining === 0 ? 'Đã hết hạn thuê!' : `Còn lại: ${days} ngày ${hours} giờ ${minutes} phút ${seconds} giây`} */}
-            {remaining === 0 ? 'Đã hết hạn thuê!' : `Còn lại: ${days}d${hours}h`}
+            {remaining === 0 ? 'Đã hết hạn thuê!' : `Còn lại: ${days}d ${hours}h ${minutes}m ${seconds}s`}
         </div>
     );
 };
@@ -48,10 +68,23 @@ const OrderPage = () => {
     const [activeTab, setActiveTab] = useState('all');
     const [orderDetail, setOrderDetail] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
-    const [refundModal, setRefundModal] = useState({ visible: false, amount: 0 });
+    const [refundModal, setRefundModal] = useState({ visible: false, amount: 0, remainingDays: 0, remainingHours: 0 });
     const [motorbikeDetails, setMotorbikeDetails] = useState([]);
     const [accessoryDetails, setAccessoryDetails] = useState([]);
     const [documentModal, setDocumentModal] = useState({ visible: false, orderId: null, documents: null });
+    const [orderRefunds, setOrderRefunds] = useState({});
+    const [highlightedOrder, setHighlightedOrder] = useState(null);
+    const [maintenanceModal, setMaintenanceModal] = useState({ visible: false, orderId: null, motorbikes: [], maintenanceLevels: {}, selections: {} });
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
+    const [imagePreview, setImagePreview] = useState({ visible: false, src: '', title: '' });
+    const [maintenanceImages, setMaintenanceImages] = useState({});
+    const [imageUrls, setImageUrls] = useState({});
+
+    // Debug effect for image states
+    useEffect(() => {
+        console.log('Maintenance images changed:', maintenanceImages);
+        console.log('Image URLs changed:', imageUrls);
+    }, [maintenanceImages, imageUrls]);
 
     // Pagination state for each status
     const [pagination, setPagination] = useState(() => {
@@ -97,6 +130,31 @@ const OrderPage = () => {
                         return { ...order, documentsValid: false };
                     }));
                     setOrders(ordersWithDocuments);
+
+                    // Fetch refunds for completed orders
+                    const completedOrders = ordersWithDocuments.filter(order => order.status === 'completed');
+                    const refundsData = {};
+
+                    await Promise.all(completedOrders.map(async (order) => {
+                        try {
+                            const refundRes = await fetch('http://localhost:8080/api/v1/employee/refund/all', {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            const refundData = await refundRes.json();
+                            if (refundData.success && Array.isArray(refundData.refunds)) {
+                                const orderRefund = refundData.refunds.find(r =>
+                                    r.paymentId?.rentalOrderId === order._id && r.status === 'pending'
+                                );
+                                if (orderRefund) {
+                                    refundsData[order._id] = orderRefund;
+                                }
+                            }
+                        } catch {
+                            // Ignore individual refund fetch errors
+                        }
+                    }));
+
+                    setOrderRefunds(refundsData);
                 } else {
                     message.error(data.message || 'Không thể lấy danh sách đơn hàng.');
                 }
@@ -108,6 +166,205 @@ const OrderPage = () => {
         };
         fetchOrders();
     }, []);
+
+    // Fetch maintenance levels and order motorbikes for maintenance selection
+    const fetchMaintenanceData = async (orderId) => {
+        try {
+            const token = localStorage.getItem('token');
+
+            // Fetch maintenance levels
+            const levelsRes = await fetch('http://localhost:8080/api/v1/employee/maintenance/levels', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const levelsData = await levelsRes.json();
+
+            // Fetch order motorbikes
+            const motorbikesRes = await fetch(`http://localhost:8080/api/v1/employee/maintenance/order/${orderId}/motorbikes`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const motorbikesData = await motorbikesRes.json();
+
+            if (levelsData.success && motorbikesData.success) {
+                const initialSelections = {};
+                console.log('Motorbikes data:', motorbikesData.motorbikes);
+                motorbikesData.motorbikes.forEach(mb => {
+                    console.log('Setting initial selection for motorbike:', mb.motorbikeId);
+                    initialSelections[mb.motorbikeId] = {
+                        level: 'normal',
+                        description: ''
+                    };
+                });
+                console.log('Initial selections:', initialSelections);
+
+                setMaintenanceModal({
+                    visible: true,
+                    orderId,
+                    motorbikes: motorbikesData.motorbikes,
+                    maintenanceLevels: levelsData.maintenanceLevels,
+                    selections: initialSelections
+                });
+            } else {
+                message.error('Không thể lấy thông tin bảo dưỡng');
+            }
+        } catch {
+            message.error('Lỗi khi tải thông tin bảo dưỡng');
+        }
+    };
+
+    // Handle maintenance level change
+    const handleMaintenanceLevelChange = (motorbikeId, level) => {
+        console.log('Changing maintenance level for motorbike:', motorbikeId, 'to level:', level);
+        setMaintenanceModal(prev => {
+            const newSelections = {
+                ...prev.selections,
+                [motorbikeId]: {
+                    ...prev.selections[motorbikeId],
+                    level
+                }
+            };
+            console.log('New selections:', newSelections);
+            return {
+                ...prev,
+                selections: newSelections
+            };
+        });
+    };
+
+    // Handle maintenance description change
+    const handleMaintenanceDescriptionChange = (motorbikeId, description) => {
+        setMaintenanceModal(prev => ({
+            ...prev,
+            selections: {
+                ...prev.selections,
+                [motorbikeId]: {
+                    ...prev.selections[motorbikeId],
+                    description
+                }
+            }
+        }));
+    };
+
+    // Calculate total maintenance fee
+    const calculateTotalMaintenanceFee = () => {
+        let total = 0;
+        let additionalFee = 0;
+        maintenanceModal.motorbikes.forEach(mb => {
+            const selection = maintenanceModal.selections[mb.motorbikeId];
+            if (selection) {
+                const level = mb.maintenanceLevels.find(l => l.level === selection.level);
+                if (level) {
+                    const fee = level.estimatedFee || 0;
+                    total += fee;
+                    // Only add to additionalFee if no damage waiver
+                    if (!mb.hasDamageWaiver) {
+                        additionalFee += fee;
+                    }
+                }
+            }
+        });
+        return { total, additionalFee };
+    };
+
+    // Handle checkout with maintenance
+    const handleCheckoutWithMaintenance = async () => {
+        setCheckoutLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+
+            // First, perform checkout
+            const checkoutRes = await fetch(`http://localhost:8080/api/v1/employee/order/${maintenanceModal.orderId}/checkout`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const checkoutData = await checkoutRes.json();
+
+            if (checkoutData.success) {
+                // Update order status
+                setOrders(prev => prev.map(o => o._id === maintenanceModal.orderId ? { ...o, status: 'completed', checkOutDate: new Date() } : o));
+
+                // Show checkout success message
+                message.success(checkoutData.message);
+
+                // Then create maintenance records
+                const maintenanceSelections = maintenanceModal.motorbikes.map(motorbike => {
+                    const selection = maintenanceModal.selections[motorbike.motorbikeId];
+                    if (selection) {
+                        return {
+                            motorbikeId: motorbike.motorbikeId,
+                            level: selection.level,
+                            description: selection.description,
+                            image: maintenanceImages[motorbike.motorbikeId] || null
+                        };
+                    }
+                    return null;
+                }).filter(Boolean); // Remove null entries
+
+                console.log('Maintenance selections:', maintenanceSelections);
+                console.log('Order ID:', maintenanceModal.orderId);
+                console.log('Available motorbikes:', maintenanceModal.motorbikes.map(mb => ({ id: mb.motorbikeId, code: mb.code })));
+                console.log('Selections object:', maintenanceModal.selections);
+                console.log('Maintenance images state:', maintenanceImages);
+
+                // Create FormData for maintenance with images
+                const formData = new FormData();
+                const maintenanceSelectionsWithoutImages = maintenanceSelections.map(selection => ({
+                    motorbikeId: selection.motorbikeId,
+                    level: selection.level,
+                    description: selection.description
+                }));
+
+                formData.append('maintenanceSelections', JSON.stringify(maintenanceSelectionsWithoutImages));
+
+                // Add images to FormData
+                console.log('Adding images to FormData...');
+                maintenanceSelections.forEach((selection, index) => {
+                    if (selection.image) {
+                        console.log(`Adding image for index ${index}, motorbikeId: ${selection.motorbikeId}`);
+                        formData.append(`images`, selection.image);
+                        formData.append(`imageIndexes`, index.toString());
+                    }
+                });
+
+                console.log('FormData contents:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}:`, value);
+                }
+
+                const maintenanceRes = await fetch(`http://localhost:8080/api/v1/employee/maintenance/order/${maintenanceModal.orderId}/create`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                console.log('Maintenance response status:', maintenanceRes.status);
+                const maintenanceData = await maintenanceRes.json();
+                console.log('Maintenance response data:', maintenanceData);
+                if (maintenanceData.success) {
+                    message.success('Tạo bảo dưỡng thành công!');
+                } else {
+                    message.warning('Checkout thành công nhưng tạo bảo dưỡng thất bại: ' + maintenanceData.message);
+                }
+
+                // Close modal
+                setMaintenanceModal({ visible: false, orderId: null, motorbikes: [], maintenanceLevels: {}, selections: {} });
+                setMaintenanceImages({});
+                // Clean up image URLs to prevent memory leaks
+                Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
+                setImageUrls({});
+            } else {
+                message.error(checkoutData.message || 'Checkout thất bại');
+            }
+        } catch {
+            message.error('Lỗi khi checkout và tạo bảo dưỡng');
+        } finally {
+            setCheckoutLoading(false);
+        }
+    };
 
     // Group orders by status
     const grouped = statusOrder.reduce((acc, status) => {
@@ -278,59 +535,18 @@ const OrderPage = () => {
                 }
                 // Active status: show checkout button
                 if (record.status === 'active') {
+                    const remainingTime = calculateRemainingTime(record.returnDate);
                     return (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                             <RentalCountdown returnDate={record.returnDate} />
+                            {remainingTime.canRefund && (
+                                <div style={{ fontSize: 12, color: '#52c41a', marginBottom: 4 }}>
+                                    Có thể hoàn tiền: {remainingTime.remainingDays}d {remainingTime.remainingHoursInDay}h
+                                </div>
+                            )}
                             <Button
                                 type="primary"
-                                onClick={async () => {
-                                    try {
-                                        const token = localStorage.getItem('token');
-                                        const res = await fetch(`http://localhost:8080/api/v1/employee/order/${record._id}/checkout`, {
-                                            method: 'PUT',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                Authorization: `Bearer ${token}`
-                                            }
-                                        });
-                                        const data = await res.json();
-                                        if (data.success) {
-                                            // Fetch updated order to check for refund
-                                            const orderRes = await fetch(`http://localhost:8080/api/v1/employee/order/${record._id}`, {
-                                                headers: { Authorization: `Bearer ${token}` }
-                                            });
-                                            const orderData = await orderRes.json();
-                                            if (orderData.success && orderData.rentalOrder) {
-                                                setOrders(prev => prev.map(o => o._id === record._id ? { ...o, status: 'completed', checkOutDate: orderData.rentalOrder.checkOutDate } : o));
-                                                const checkOutDate = new Date(orderData.rentalOrder.checkOutDate);
-                                                const returnDate = new Date(orderData.rentalOrder.returnDate);
-                                                if (checkOutDate < returnDate) {
-                                                    // 1. Create refund if early return
-                                                    await fetch(`http://localhost:8080/api/v1/employee/refund/create/${record._id}`, {
-                                                        method: 'POST',
-                                                        headers: { Authorization: `Bearer ${token}` }
-                                                    });
-                                                    // 2. Fetch refund info
-                                                    const refundRes = await fetch('http://localhost:8080/api/v1/employee/refund/all', {
-                                                        headers: { Authorization: `Bearer ${token}` }
-                                                    });
-                                                    const refundData = await refundRes.json();
-                                                    if (refundData.success && Array.isArray(refundData.refunds)) {
-                                                        const refund = refundData.refunds.find(r => r.paymentId?.rentalOrderId === record._id && r.status === 'pending');
-                                                        if (refund) {
-                                                            setRefundModal({ visible: true, amount: refund.amount });
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            message.success('Checkout thành công!');
-                                        } else {
-                                            message.error(data.message || 'Checkout thất bại');
-                                        }
-                                    } catch {
-                                        message.error('Lỗi khi checkout.');
-                                    }
-                                }}
+                                onClick={() => fetchMaintenanceData(record._id)}
                                 style={{ minWidth: 120 }}
                                 block
                             >
@@ -379,11 +595,24 @@ const OrderPage = () => {
                             <Modal
                                 title="Hoàn tiền trả xe sớm"
                                 visible={refundModal.visible}
-                                onCancel={() => setRefundModal({ visible: false, amount: 0 })}
+                                onCancel={() => setRefundModal({ visible: false, amount: 0, remainingDays: 0, remainingHours: 0 })}
                                 footer={null}
                             >
                                 <div style={{ fontSize: 16, color: '#1890ff' }}>
-                                    Đơn hàng trả xe sớm. Số tiền hoàn lại: <b>{refundModal.amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</b>
+                                    <div style={{ marginBottom: 12 }}>
+                                        <strong>Thông tin hoàn tiền:</strong>
+                                    </div>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <span>Thời gian còn lại: </span>
+                                        <b>{refundModal.remainingDays} ngày {refundModal.remainingHours} giờ</b>
+                                    </div>
+                                    <div>
+                                        <span>Số tiền hoàn lại: </span>
+                                        <b style={{ color: '#52c41a' }}>{refundModal.amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</b>
+                                    </div>
+                                    <div style={{ marginTop: 12, fontSize: 14, color: '#666', fontStyle: 'italic' }}>
+                                        * Hoàn tiền chỉ tính cho ngày đầy đủ, không tính cho ngày lẻ
+                                    </div>
                                 </div>
                             </Modal>
                         </div>
@@ -392,6 +621,33 @@ const OrderPage = () => {
                 // Default: only show info button
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        {/* Show refund button for completed orders with refunds */}
+                        {record.status === 'completed' && orderRefunds[record._id] && (
+                            <Button
+                                type="primary"
+                                style={{
+                                    backgroundColor: '#52c41a',
+                                    borderColor: '#52c41a',
+                                    minWidth: 120,
+                                    animation: highlightedOrder === record._id ? 'highlight 2s ease-in-out' : 'none'
+                                }}
+                                onClick={() => {
+                                    // Highlight the order for 2 seconds
+                                    setHighlightedOrder(record._id);
+                                    setTimeout(() => setHighlightedOrder(null), 2000);
+
+                                    // Navigate to refund page with order ID for highlighting
+                                    message.success('Chuyển đến trang hoàn tiền!');
+                                    setTimeout(() => navigate('/employee/refund', {
+                                        state: { highlightOrderId: record._id }
+                                    }), 500);
+                                }}
+                                block
+                            >
+                                Xem hoàn tiền
+                            </Button>
+                        )}
+
                         {/* <Button type="primary" onClick={() => { setModalVisible(true); }}>
                             Xem chi tiết
                         </Button> */}
@@ -442,6 +698,20 @@ const OrderPage = () => {
 
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
+            <style>
+                {`
+                    @keyframes highlight {
+                        0% { background-color: #52c41a; }
+                        50% { background-color: #ff4d4f; }
+                        100% { background-color: #52c41a; }
+                    }
+                    
+                    .highlighted-row {
+                        background-color: #fff2e8 !important;
+                        animation: highlight 2s ease-in-out;
+                    }
+                `}
+            </style>
             <h1 style={{ textAlign: 'center', marginBottom: 24 }}>Quản lý đơn hàng</h1>
             <Row gutter={16} style={{ marginBottom: 24 }}>
                 <Col span={4}><Card><b>Tổng đơn</b><br />{orders.length}</Card></Col>
@@ -450,6 +720,11 @@ const OrderPage = () => {
                         <Card>
                             <b>{statusMap[s.status].label}</b><br />
                             <span style={{ color: statusMap[s.status].color }}>{s.count}</span>
+                            {/* {s.status === 'completed' && Object.keys(orderRefunds).length > 0 && (
+                                <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
+                                    <b>Có {Object.keys(orderRefunds).length} hoàn tiền</b>
+                                </div>
+                            )} */}
                         </Card>
                     </Col>
                 ))}
@@ -472,6 +747,7 @@ const OrderPage = () => {
                                     pagination[status].current * pagination[status].pageSize
                                 )}
                                 rowKey="_id"
+                                rowClassName={(record) => highlightedOrder === record._id ? 'highlighted-row' : ''}
                                 pagination={{
                                     current: pagination[status].current,
                                     pageSize: pagination[status].pageSize,
@@ -492,6 +768,7 @@ const OrderPage = () => {
                             pagination[activeTab].current * pagination[activeTab].pageSize
                         )}
                         rowKey="_id"
+                        rowClassName={(record) => highlightedOrder === record._id ? 'highlighted-row' : ''}
                         pagination={{
                             current: pagination[activeTab].current,
                             pageSize: pagination[activeTab].pageSize,
@@ -685,8 +962,14 @@ const OrderPage = () => {
                                                     width: '100%',
                                                     height: '120px',
                                                     objectFit: 'cover',
-                                                    display: 'block'
+                                                    display: 'block',
+                                                    cursor: 'pointer'
                                                 }}
+                                                onClick={() => setImagePreview({
+                                                    visible: true,
+                                                    src: `http://localhost:8080/uploads/${image}`,
+                                                    title: `CCCD ${index + 1}`
+                                                })}
                                                 onError={(e) => {
                                                     e.target.style.display = 'none';
                                                     e.target.nextSibling.style.display = 'flex';
@@ -742,8 +1025,14 @@ const OrderPage = () => {
                                                     width: '100%',
                                                     height: '120px',
                                                     objectFit: 'cover',
-                                                    display: 'block'
+                                                    display: 'block',
+                                                    cursor: 'pointer'
                                                 }}
+                                                onClick={() => setImagePreview({
+                                                    visible: true,
+                                                    src: `http://localhost:8080/uploads/${image}`,
+                                                    title: `Bằng lái ${index + 1}`
+                                                })}
                                                 onError={(e) => {
                                                     e.target.style.display = 'none';
                                                     e.target.nextSibling.style.display = 'flex';
@@ -793,6 +1082,336 @@ const OrderPage = () => {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* Maintenance Selection Modal */}
+            <Modal
+                title="Chọn cấp độ bảo dưỡng"
+                visible={maintenanceModal.visible}
+                onCancel={() => {
+                    setMaintenanceModal({ visible: false, orderId: null, motorbikes: [], maintenanceLevels: {}, selections: {} });
+                    setMaintenanceImages({});
+                    // Clean up image URLs to prevent memory leaks
+                    Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
+                    setImageUrls({});
+                }}
+                footer={[
+                    <Button
+                        key="cancel"
+                        onClick={() => {
+                            setMaintenanceModal({ visible: false, orderId: null, motorbikes: [], maintenanceLevels: {}, selections: {} });
+                            setMaintenanceImages({});
+                            // Clean up image URLs to prevent memory leaks
+                            Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
+                            setImageUrls({});
+                        }}
+                    >
+                        Hủy
+                    </Button>,
+                    <Button
+                        key="confirm"
+                        type="primary"
+                        loading={checkoutLoading}
+                        onClick={handleCheckoutWithMaintenance}
+                    >
+                        Hoàn thành
+                    </Button>
+                ]}
+                width={1000}
+            >
+                <div style={{ marginBottom: 16 }}>
+                    <h4>Danh sách xe cần bảo dưỡng</h4>
+                </div>
+
+                {maintenanceModal.motorbikes.map((motorbike) => {
+                    const selection = maintenanceModal.selections[motorbike.motorbikeId];
+                    const selectedLevel = selection ? motorbike.maintenanceLevels.find(level => level.level === selection.level) : null;
+                    console.log('Motorbike:', motorbike.code, 'Selection:', selection, 'SelectedLevel:', selectedLevel);
+                    console.log('Maintenance images state:', maintenanceImages);
+                    console.log('Image URLs state:', imageUrls);
+
+                    return (
+                        <Card key={motorbike.motorbikeId} style={{ marginBottom: 16 }}>
+                            <Row gutter={16} align="middle">
+                                <Col span={5}>
+                                    <div>
+                                        <Text strong>Mã xe: </Text>
+                                        <Text>{motorbike.code}</Text>
+                                    </div>
+                                    <div>
+                                        <Text strong>Loại xe: </Text>
+                                        <Text>{motorbike.motorbikeTypeName}</Text>
+                                    </div>
+                                    <div>
+                                        <Text strong>Giá trị xe: </Text>
+                                        <Text>{motorbike.vehicleValue.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</Text>
+                                    </div>
+                                    {motorbike.hasDamageWaiver && (
+                                        <div style={{ marginTop: 8 }}>
+                                            <Tag color="green">Đã mua bảo hiểm thiệt hại</Tag>
+                                        </div>
+                                    )}
+                                </Col>
+
+                                <Col span={5}>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <Text strong>Cấp độ bảo dưỡng:</Text>
+                                    </div>
+                                    <Select
+                                        value={selection?.level || 'normal'}
+                                        onChange={(value) => handleMaintenanceLevelChange(motorbike.motorbikeId, value)}
+                                        style={{ width: '100%' }}
+                                    >
+                                        {motorbike.maintenanceLevels.map(level => (
+                                            <Option key={level.level} value={level.level}>
+                                                <Tag color={level.level === 'normal' ? 'green' : level.level === 'light' ? 'blue' : level.level === 'medium' ? 'orange' : 'red'}>
+                                                    {level.name}
+                                                </Tag>
+                                            </Option>
+                                        ))}
+                                    </Select>
+                                </Col>
+
+                                <Col span={5}>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <Text strong>Thời gian: </Text>
+                                        <Text>{selectedLevel?.duration || 0} ngày</Text>
+                                    </div>
+                                    <div>
+                                        <Text strong>Phí bảo dưỡng: </Text>
+                                        <Text style={{ color: '#52c41a', fontWeight: 'bold' }}>
+                                            {selectedLevel?.estimatedFee?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) || '0 VND'}
+                                        </Text>
+                                    </div>
+                                    {motorbike.hasDamageWaiver && selectedLevel?.estimatedFee > 0 && (
+                                        <div style={{ marginTop: 4 }}>
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                (Không tính vào phí bổ sung)
+                                            </Text>
+                                        </div>
+                                    )}
+                                </Col>
+
+                                <Col span={5}>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <Text strong>Mô tả thêm:</Text>
+                                    </div>
+                                    <TextArea
+                                        value={selection?.description || ''}
+                                        onChange={(e) => handleMaintenanceDescriptionChange(motorbike.motorbikeId, e.target.value)}
+                                        placeholder="Nhập mô tả bảo dưỡng (tùy chọn)"
+                                        rows={2}
+                                    />
+                                    <div style={{ marginTop: 8 }}>
+                                        <Text strong>Hình ảnh tình trạng xe:</Text>
+                                        <div style={{ marginTop: 8 }}>
+                                            {(() => {
+                                                const hasImage = maintenanceImages[motorbike.motorbikeId];
+                                                const imageUrl = imageUrls[motorbike.motorbikeId];
+                                                console.log(`Rendering image for ${motorbike.code}:`, { hasImage, imageUrl });
+                                                return hasImage ? (
+                                                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                                                        <img
+                                                            src={imageUrl}
+                                                            alt="Maintenance"
+                                                            style={{
+                                                                width: '100px',
+                                                                height: '100px',
+                                                                objectFit: 'cover',
+                                                                borderRadius: '8px',
+                                                                border: '1px solid #d9d9d9'
+                                                            }}
+                                                            onLoad={() => console.log(`Image loaded successfully for ${motorbike.code}`)}
+                                                            onError={(e) => console.log(`Image failed to load for ${motorbike.code}:`, e)}
+                                                        />
+                                                        <Button
+                                                            type="text"
+                                                            danger
+                                                            size="small"
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: -8,
+                                                                right: -8,
+                                                                background: 'white',
+                                                                border: '1px solid #ff4d4f',
+                                                                borderRadius: '50%',
+                                                                width: '20px',
+                                                                height: '20px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                padding: 0
+                                                            }}
+                                                            onClick={() => {
+                                                                setMaintenanceImages(prev => {
+                                                                    const newImages = { ...prev };
+                                                                    delete newImages[motorbike.motorbikeId];
+                                                                    return newImages;
+                                                                });
+                                                                setImageUrls(prev => {
+                                                                    const newUrls = { ...prev };
+                                                                    delete newUrls[motorbike.motorbikeId];
+                                                                    return newUrls;
+                                                                });
+                                                            }}
+                                                        >
+                                                            ×
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{
+                                                        width: '100px',
+                                                        height: '100px',
+                                                        border: '2px dashed #d9d9d9',
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        background: '#fafafa',
+                                                        position: 'relative'
+                                                    }}>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                opacity: 0,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            onChange={(e) => {
+                                                                const file = e.target.files[0];
+                                                                console.log('File input change:', file);
+
+                                                                if (file) {
+                                                                    // Validate file
+                                                                    const isImage = file.type.startsWith('image/');
+                                                                    if (!isImage) {
+                                                                        message.error('Chỉ có thể tải lên file hình ảnh!');
+                                                                        return;
+                                                                    }
+
+                                                                    const isLt2M = file.size / 1024 / 1024 < 2;
+                                                                    if (!isLt2M) {
+                                                                        message.error('Hình ảnh phải nhỏ hơn 2MB!');
+                                                                        return;
+                                                                    }
+
+                                                                    const imageUrl = URL.createObjectURL(file);
+                                                                    console.log('Created image URL:', imageUrl);
+                                                                    console.log('Motorbike ID:', motorbike.motorbikeId);
+
+                                                                    setMaintenanceImages(prev => {
+                                                                        const newState = {
+                                                                            ...prev,
+                                                                            [motorbike.motorbikeId]: file
+                                                                        };
+                                                                        console.log('New maintenance images state:', newState);
+                                                                        return newState;
+                                                                    });
+
+                                                                    setImageUrls(prev => {
+                                                                        const newState = {
+                                                                            ...prev,
+                                                                            [motorbike.motorbikeId]: imageUrl
+                                                                        };
+                                                                        console.log('New image URLs state:', newState);
+                                                                        return newState;
+                                                                    });
+
+                                                                    message.success(`Đã tải lên ảnh cho xe ${motorbike.code}`);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <div style={{ fontSize: 16, color: '#999' }}>+</div>
+                                                        <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>Tải ảnh</div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </Col>
+                            </Row>
+
+                            {selectedLevel && (
+                                <div style={{ marginTop: 12, padding: 8, backgroundColor: '#f6ffed', borderRadius: 4 }}>
+                                    <Text type="secondary">{selectedLevel.description}</Text>
+                                </div>
+                            )}
+                        </Card>
+                    );
+                })}
+
+                <div style={{ textAlign: 'center', marginTop: 16, padding: 16, backgroundColor: '#f0f8ff', borderRadius: 8 }}>
+                    <h4>
+                        Tổng phí bảo dưỡng:
+                        <span style={{ color: '#52c41a', marginLeft: 8 }}>
+                            {calculateTotalMaintenanceFee().total.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                        </span>
+                    </h4>
+                    {calculateTotalMaintenanceFee().additionalFee !== calculateTotalMaintenanceFee().total && (
+                        <div style={{ marginTop: 8 }}>
+                            <Text type="secondary">
+                                Phí bổ sung (không có bảo hiểm):
+                                <span style={{ color: '#ff4d4f', marginLeft: 4, fontWeight: 'bold' }}>
+                                    {calculateTotalMaintenanceFee().additionalFee.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                                </span>
+                            </Text>
+                        </div>
+                    )}
+                </div>
+            </Modal>
+
+            {/* Image Preview Modal */}
+            <Modal
+                title={imagePreview.title}
+                visible={imagePreview.visible}
+                onCancel={() => setImagePreview({ visible: false, src: '', title: '' })}
+                footer={[
+                    <Button
+                        key="close"
+                        onClick={() => setImagePreview({ visible: false, src: '', title: '' })}
+                    >
+                        Đóng
+                    </Button>
+                ]}
+                width={800}
+                centered
+            >
+                <div style={{ textAlign: 'center' }}>
+                    <img
+                        src={imagePreview.src}
+                        alt={imagePreview.title}
+                        style={{
+                            maxWidth: '100%',
+                            maxHeight: '600px',
+                            objectFit: 'contain',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                        }}
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                        }}
+                    />
+                    <div
+                        style={{
+                            display: 'none',
+                            padding: '40px',
+                            background: '#f5f5f5',
+                            borderRadius: '8px',
+                            color: '#999',
+                            fontSize: '16px'
+                        }}
+                    >
+                        Không thể tải ảnh
+                    </div>
+                </div>
             </Modal>
         </div>
     );
