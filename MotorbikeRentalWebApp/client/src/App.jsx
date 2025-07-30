@@ -54,6 +54,7 @@ import InvoicePage from './pages/employee/order/InvoicePage'
 import RefundPage from './pages/employee/order/RefundPage'
 import RateOrderPage from './pages/customer/order/RateOrderPage'
 import MaintenancePage from './pages/employee/maintenance/MaintenancePage'
+import LocationTrackingPage from './pages/employee/location/LocationTrackingPage'
 
 function App() {
 
@@ -256,6 +257,12 @@ function App() {
           <Route path='/employee/maintenance' element={
             <ProtectedRoute allowedRoles={["employee"]}>
               <MaintenancePage />
+            </ProtectedRoute>
+          } />
+          {/* ====employee-location==== */}
+          <Route path='/employee/location' element={
+            <ProtectedRoute allowedRoles={["employee"]}>
+              <LocationTrackingPage />
             </ProtectedRoute>
           } />
           {/* ====customer==== */}

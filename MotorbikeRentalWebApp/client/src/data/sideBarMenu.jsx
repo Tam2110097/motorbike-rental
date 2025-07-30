@@ -36,6 +36,11 @@ export const employeeMenu = [
         icon: NotificationOutlined,
         label: "Quản lý hoàn tiền",
     },
+    {
+        path: "/employee/location",
+        icon: NotificationOutlined,
+        label: "Theo dõi vị trí xe máy"
+    }
 ]
 
 //admin menu
