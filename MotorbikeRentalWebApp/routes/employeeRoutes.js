@@ -48,6 +48,18 @@ const {
     completeMaintenance
 } = require('../controllers/employee-controller/maintenanceCtrl');
 
+const {
+    getAllRentedMotorbikeLocations,
+    getMotorbikeLocation,
+    getMotorbikeLocationHistory,
+    startMotorbikeSimulation,
+    stopMotorbikeSimulation,
+    startAllRentedSimulations,
+    stopAllSimulations,
+    getSimulationStatus,
+    manualUpdateLocation
+} = require('../controllers/employee-controller/locationCtrl');
+
 // Router object
 const router = express.Router();
 
@@ -143,5 +155,35 @@ router.get('/maintenance/all', authMiddleware, authorizeRoles('employee'), getAl
 
 // Complete maintenance
 router.put('/maintenance/:maintenanceId/complete', authMiddleware, authorizeRoles('employee'), completeMaintenance);
+
+/*
+**************EMPLOYEE ROUTE LOCATION TRACKING**************
+*/
+// Get all rented motorbike locations
+router.get('/location/rented-motorbikes', authMiddleware, authorizeRoles('employee'), getAllRentedMotorbikeLocations);
+
+// Get specific motorbike location
+router.get('/location/motorbike/:motorbikeId', authMiddleware, authorizeRoles('employee'), getMotorbikeLocation);
+
+// Get motorbike location history
+router.get('/location/motorbike/:motorbikeId/history', authMiddleware, authorizeRoles('employee'), getMotorbikeLocationHistory);
+
+// Start GPS simulation for specific motorbike
+router.post('/location/simulation/start/:motorbikeId', authMiddleware, authorizeRoles('employee'), startMotorbikeSimulation);
+
+// Stop GPS simulation for specific motorbike
+router.post('/location/simulation/stop/:motorbikeId', authMiddleware, authorizeRoles('employee'), stopMotorbikeSimulation);
+
+// Start GPS simulation for all rented motorbikes
+router.post('/location/simulation/start-all', authMiddleware, authorizeRoles('employee'), startAllRentedSimulations);
+
+// Stop all GPS simulations
+router.post('/location/simulation/stop-all', authMiddleware, authorizeRoles('employee'), stopAllSimulations);
+
+// Get simulation status
+router.get('/location/simulation/status', authMiddleware, authorizeRoles('employee'), getSimulationStatus);
+
+// Manual location update from frontend simulation
+router.post('/location/simulation/manual', authMiddleware, authorizeRoles('employee'), manualUpdateLocation);
 
 module.exports = router;

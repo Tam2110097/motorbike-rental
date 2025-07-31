@@ -1,6 +1,7 @@
 const motorbikeModel = require('../../models/motorbikeModels');
 const motorbikeTypeModel = require('../../models/motorbikeTypeModels');
 const branchModel = require('../../models/branchModels');
+const { startSimulationForRentedMotorbike, stopSimulationForNonRentedMotorbike } = require('../../jobs/gpsSimulationJob');
 
 // Create motorbike controller
 const createMotorbike = async (req, res) => {
@@ -355,6 +356,15 @@ const updateMotorbikeStatus = async (req, res) => {
             { status },
             { new: true }
         ).populate('motorbikeType').populate('branchId');
+
+        // Handle GPS simulation based on status change
+        if (status === 'rented') {
+            // Start GPS simulation for newly rented motorbike
+            await startSimulationForRentedMotorbike(id);
+        } else if (existingMotorbike.status === 'rented' && status !== 'rented') {
+            // Stop GPS simulation for motorbike that's no longer rented
+            await stopSimulationForNonRentedMotorbike(id);
+        }
 
         res.status(200).json({
             success: true,

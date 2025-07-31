@@ -24,8 +24,10 @@ const LocationTrackingPage = () => {
     const [loading, setLoading] = useState(false);
     const [socket, setSocket] = useState(null);
     const [userPosition, setUserPosition] = useState(null);
-    const [simMarkerPos, setSimMarkerPos] = useState([10.7769, 106.7009]); // vị trí ban đầu (HCM)
-    const intervalRef = useRef(null);
+
+    // State lưu vị trí của từng xe (giống như markers trong REALTIME_TRACKER)
+    const [motorbikePositions, setMotorbikePositions] = useState({});
+    const intervalsRef = useRef({});
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -104,56 +106,117 @@ const LocationTrackingPage = () => {
         }
     }, []);
 
-    // Hàm sinh vị trí mới (giả lập chuyển động ngẫu nhiên)
-    const moveSimMarker = () => {
-        setSimMarkerPos(prev => {
-            const [lat, lng] = prev;
-            // Tạo chuyển động nhỏ ngẫu nhiên
-            const newLat = lat + (Math.random() - 0.5) * 0.001;
-            const newLng = lng + (Math.random() - 0.5) * 0.001;
-            return [newLat, newLng];
-        });
-    };
-
-    // Bắt đầu di chuyển marker khi mount
+    // Khởi tạo vị trí ban đầu cho từng xe khi có danh sách xe rented
     useEffect(() => {
-        intervalRef.current = setInterval(() => {
-            moveSimMarker();
-        }, 1000); // mỗi 1 giây
-        return () => clearInterval(intervalRef.current);
-    }, []);
+        if (rentedMotorbikes.length > 0) {
+            console.log('Khởi tạo vị trí cho', rentedMotorbikes.length, 'xe');
+            const initialPositions = {};
+            rentedMotorbikes.forEach(item => {
+                const motorbikeId = item.motorbike._id;
+                // Luôn tạo vị trí mới cho xe chưa có vị trí
+                if (!motorbikePositions[motorbikeId]) {
+                    const baseLat = 10.7769;
+                    const baseLng = 106.7009;
+                    const randomLat = baseLat + (Math.random() - 0.5) * 0.01;
+                    const randomLng = baseLng + (Math.random() - 0.5) * 0.01;
 
-    // Gửi vị trí mới về backend mỗi khi marker di chuyển
-    useEffect(() => {
-        const [lat, lng] = simMarkerPos;
-        const locationData = {
-            motorbikeId: '65f1234567890abcdef12345', // ID xe mẫu - có thể thay đổi
-            latitude: lat,
-            longitude: lng,
-            speed: Math.random() * 50 + 10, // Tốc độ ngẫu nhiên 10-60 km/h
-            heading: Math.random() * 360, // Hướng ngẫu nhiên 0-360 độ
-            timestamp: new Date().toISOString(),
-            isActive: true
-        };
-        const token = localStorage.getItem('token');
-        axios.post('/api/v1/employee/location/simulation/manual', locationData, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(response => {
-                console.log('Đã lưu vị trí:', response.data);
-            })
-            .catch(err => {
-                console.error('Lỗi gửi vị trí:', err);
+                    initialPositions[motorbikeId] = [randomLat, randomLng];
+                    console.log(`Tạo vị trí ban đầu cho xe ${item.motorbike.code}:`, [randomLat, randomLng]);
+                }
             });
-    }, [simMarkerPos]);
+            setMotorbikePositions(prev => {
+                const newPositions = { ...prev, ...initialPositions };
+                console.log('Tất cả vị trí sau khi khởi tạo:', newPositions);
+                return newPositions;
+            });
+        }
+    }, [rentedMotorbikes]);
+
+    // Tạo timer di chuyển độc lập cho từng xe (giống như mỗi tab trong REALTIME_TRACKER)
+    useEffect(() => {
+        console.log('Tạo timer cho', rentedMotorbikes.length, 'xe, vị trí hiện tại:', motorbikePositions);
+
+        // Dọn dẹp intervals cũ
+        Object.values(intervalsRef.current).forEach(clearInterval);
+        intervalsRef.current = {};
+
+        // Tạo interval mới cho từng xe
+        rentedMotorbikes.forEach(item => {
+            const motorbikeId = item.motorbike._id;
+
+            // Chỉ tạo interval nếu xe có vị trí
+            if (motorbikePositions[motorbikeId]) {
+                console.log(`Tạo timer cho xe ${item.motorbike.code} (${motorbikeId})`);
+
+                intervalsRef.current[motorbikeId] = setInterval(() => {
+                    setMotorbikePositions(prev => {
+                        const currentPos = prev[motorbikeId];
+                        if (!currentPos) {
+                            console.log(`Không tìm thấy vị trí cho xe ${motorbikeId}`);
+                            return prev;
+                        }
+
+                        const [lat, lng] = currentPos;
+
+                        // Di chuyển ngẫu nhiên (giống như REALTIME_TRACKER)
+                        const movementDistance = 0.00005 + Math.random() * 0.00005; // 5-10 meters
+                        const angle = Math.random() * 2 * Math.PI; // Random direction
+
+                        const newLat = lat + Math.cos(angle) * movementDistance;
+                        const newLng = lng + Math.sin(angle) * movementDistance;
+
+                        const newPos = [newLat, newLng];
+                        console.log(`Xe ${item.motorbike.code} di chuyển từ [${lat.toFixed(6)}, ${lng.toFixed(6)}] đến [${newLat.toFixed(6)}, ${newLng.toFixed(6)}]`);
+
+                        // Gửi vị trí mới về backend
+                        const token = localStorage.getItem('token');
+                        const locationData = {
+                            motorbikeId: motorbikeId,
+                            latitude: newLat,
+                            longitude: newLng,
+                            speed: Math.random() * 50 + 10, // Tốc độ ngẫu nhiên 10-60 km/h
+                            heading: Math.random() * 360, // Hướng ngẫu nhiên 0-360 độ
+                            timestamp: new Date().toISOString(),
+                            isActive: true
+                        };
+
+                        axios.post('/api/v1/employee/location/simulation/manual', locationData, {
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            }
+                        })
+                            .then(response => {
+                                console.log(`Đã lưu vị trí xe ${item.motorbike.code}:`, response.data);
+                            })
+                            .catch(err => {
+                                console.error(`Lỗi gửi vị trí xe ${item.motorbike.code}:`, err);
+                            });
+
+                        return { ...prev, [motorbikeId]: newPos };
+                    });
+                }, 3000); // Mỗi 3 giây di chuyển một lần (giống REALTIME_TRACKER)
+            } else {
+                console.log(`Bỏ qua xe ${item.motorbike.code} vì chưa có vị trí`);
+            }
+        });
+
+        // Cleanup khi component unmount
+        return () => {
+            console.log('Dọn dẹp timers');
+            Object.values(intervalsRef.current).forEach(clearInterval);
+        };
+    }, [rentedMotorbikes, motorbikePositions]); // Thêm motorbikePositions vào dependency
 
     // Fetch all rented motorbikes
     const fetchRentedMotorbikes = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/v1/employee/location/rented-motorbikes');
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/v1/employee/location/rented-motorbikes', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             setRentedMotorbikes(response.data.data);
         } catch (error) {
             console.error('Error fetching rented motorbikes:', error);
@@ -166,7 +229,12 @@ const LocationTrackingPage = () => {
     // Fetch simulation status
     const fetchSimulationStatus = async () => {
         try {
-            const response = await axios.get('/api/v1/employee/location/simulation/status');
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/v1/employee/location/simulation/status', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             setSimulationStatus(response.data.data);
         } catch (error) {
             console.error('Error fetching simulation status:', error);
@@ -177,7 +245,12 @@ const LocationTrackingPage = () => {
     const startAllSimulations = async () => {
         try {
             setLoading(true);
-            await axios.post('/api/v1/employee/location/simulation/start-all');
+            const token = localStorage.getItem('token');
+            await axios.post('/api/v1/employee/location/simulation/start-all', {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             toast.success('GPS simulation started for all rented motorbikes');
             fetchSimulationStatus();
         } catch (error) {
@@ -192,7 +265,12 @@ const LocationTrackingPage = () => {
     const stopAllSimulations = async () => {
         try {
             setLoading(true);
-            await axios.post('/api/v1/employee/location/simulation/stop-all');
+            const token = localStorage.getItem('token');
+            await axios.post('/api/v1/employee/location/simulation/stop-all', {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             toast.success('All GPS simulations stopped');
             fetchSimulationStatus();
         } catch (error) {
@@ -206,7 +284,12 @@ const LocationTrackingPage = () => {
     // Start simulation for specific motorbike
     const startMotorbikeSimulation = async (motorbikeId) => {
         try {
-            await axios.post(`/api/v1/employee/location/simulation/start/${motorbikeId}`);
+            const token = localStorage.getItem('token');
+            await axios.post(`/api/v1/employee/location/simulation/start/${motorbikeId}`, {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             toast.success('GPS simulation started for this motorbike');
             fetchSimulationStatus();
         } catch (error) {
@@ -218,7 +301,12 @@ const LocationTrackingPage = () => {
     // Stop simulation for specific motorbike
     const stopMotorbikeSimulation = async (motorbikeId) => {
         try {
-            await axios.post(`/api/v1/employee/location/simulation/stop/${motorbikeId}`);
+            const token = localStorage.getItem('token');
+            await axios.post(`/api/v1/employee/location/simulation/stop/${motorbikeId}`, {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             toast.success('GPS simulation stopped for this motorbike');
             fetchSimulationStatus();
         } catch (error) {
@@ -230,7 +318,12 @@ const LocationTrackingPage = () => {
     // Fetch location history for selected motorbike
     const fetchLocationHistory = async (motorbikeId) => {
         try {
-            const response = await axios.get(`/api/v1/employee/location/motorbike/${motorbikeId}/history`);
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`/api/v1/employee/location/motorbike/${motorbikeId}/history`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             setLocationHistory(response.data.data.locationHistory);
         } catch (error) {
             console.error('Error fetching location history:', error);
@@ -251,6 +344,7 @@ const LocationTrackingPage = () => {
     }, []);
 
     console.log('Tất cả vị trí:', (rentedMotorbikes || []).map(i => i.location));
+    console.log('Vị trí các xe đang di chuyển:', motorbikePositions);
 
     return (
         <div className="p-6">
@@ -277,16 +371,16 @@ const LocationTrackingPage = () => {
                             <Popup>Vị trí của bạn</Popup>
                         </Marker>
                     )}
-                    {(rentedMotorbikes || []).map((item) => {
-                        const loc = item.location;
-                        if (!loc) return null;
-                        // Lấy giá trị latitude/longitude hoặc lat/lng và ép kiểu về số
-                        const lat = Number(loc.latitude ?? loc.lat);
-                        const lng = Number(loc.longitude ?? loc.lng);
-                        if (isNaN(lat) || isNaN(lng)) return null;
+
+                    {/* Render marker cho từng xe đang di chuyển (giống như REALTIME_TRACKER) */}
+                    {Object.entries(motorbikePositions).map(([motorbikeId, position]) => {
+                        const motorbike = rentedMotorbikes.find(item => item.motorbike._id === motorbikeId);
+                        if (!motorbike) return null;
+
+                        const [lat, lng] = position;
                         return (
                             <Marker
-                                key={item.motorbike._id}
+                                key={motorbikeId}
                                 position={[lat, lng]}
                                 icon={L.icon({
                                     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
@@ -300,19 +394,16 @@ const LocationTrackingPage = () => {
                             >
                                 <Popup>
                                     <div>
-                                        <strong>{item.motorbike.code}</strong><br />
-                                        {item.motorbike.motorbikeType?.name}<br />
+                                        <strong>{motorbike.motorbike.code}</strong><br />
+                                        {motorbike.motorbike.motorbikeType?.name}<br />
                                         Vĩ độ: {lat.toFixed(5)}<br />
-                                        Kinh độ: {lng.toFixed(5)}
+                                        Kinh độ: {lng.toFixed(5)}<br />
+                                        <span style={{ color: 'green' }}>🔄 Đang di chuyển</span>
                                     </div>
                                 </Popup>
                             </Marker>
                         );
                     })}
-                    {/* Marker giả lập di chuyển */}
-                    <Marker position={simMarkerPos}>
-                        <Popup>Marker giả lập di chuyển</Popup>
-                    </Marker>
                 </MapContainer>
             </div>
 
@@ -350,6 +441,7 @@ const LocationTrackingPage = () => {
                         <div className="space-y-3">
                             {(rentedMotorbikes || []).map((item) => {
                                 const isActive = simulationStatus.activeSimulations?.includes(item.motorbike._id);
+                                const currentPosition = motorbikePositions[item.motorbike._id];
                                 return (
                                     <div
                                         key={item.motorbike._id}
@@ -400,9 +492,9 @@ const LocationTrackingPage = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        {item.location && (
+                                        {currentPosition && (
                                             <div className="mt-2 text-xs text-gray-500">
-                                                Last Location: {item.location.latitude.toFixed(6)}, {item.location.longitude.toFixed(6)}
+                                                Current Position: {currentPosition[0].toFixed(6)}, {currentPosition[1].toFixed(6)}
                                             </div>
                                         )}
                                     </div>
