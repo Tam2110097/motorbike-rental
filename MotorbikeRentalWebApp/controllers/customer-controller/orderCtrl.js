@@ -251,7 +251,8 @@ const createRentalOrder = async (req, res) => {
                 motorbikeTypeId: detail.motorbikeTypeId,
                 quantity: detail.quantity,
                 unitPrice: detail.unitPrice,
-                damageWaiverFee: detail.damageWaiverFee
+                damageWaiverFee: detail.damageWaiverFee,
+                duration: detail.duration || rentalDays
             }).save();
         });
         await Promise.all(motorbikeDetailPromises);

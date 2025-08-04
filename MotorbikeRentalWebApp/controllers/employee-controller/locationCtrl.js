@@ -45,7 +45,7 @@ const getAllRentedMotorbikeLocations = async (req, res) => {
     }
 };
 
-// Get current location of a specific motorbike
+// Get current location of a specific motorbike (only if rented)
 const getMotorbikeLocation = async (req, res) => {
     try {
         const { motorbikeId } = req.params;
@@ -58,6 +58,14 @@ const getMotorbikeLocation = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Motorbike not found'
+            });
+        }
+
+        // Only allow access to location data for rented motorbikes
+        if (motorbike.status !== 'rented') {
+            return res.status(403).json({
+                success: false,
+                message: 'Location data is only available for rented motorbikes'
             });
         }
 
@@ -84,7 +92,7 @@ const getMotorbikeLocation = async (req, res) => {
     }
 };
 
-// Get location history for a specific motorbike
+// Get location history for a specific motorbike (only if rented)
 const getMotorbikeLocationHistory = async (req, res) => {
     try {
         const { motorbikeId } = req.params;
@@ -95,6 +103,14 @@ const getMotorbikeLocationHistory = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Motorbike not found'
+            });
+        }
+
+        // Only allow access to location history for rented motorbikes
+        if (motorbike.status !== 'rented') {
+            return res.status(403).json({
+                success: false,
+                message: 'Location history is only available for rented motorbikes'
             });
         }
 
@@ -192,6 +208,16 @@ const stopMotorbikeSimulation = async (req, res) => {
 // Start GPS simulation for all rented motorbikes
 const startAllRentedSimulations = async (req, res) => {
     try {
+        // Check if there are any rented motorbikes
+        const hasRentedMotorbikes = await gpsSimulator.hasRentedMotorbikes();
+
+        if (!hasRentedMotorbikes) {
+            return res.status(400).json({
+                success: false,
+                message: 'No rented motorbikes found. GPS simulation can only be started for rented motorbikes.'
+            });
+        }
+
         await gpsSimulator.startAllRentedSimulations();
 
         res.status(200).json({
@@ -231,13 +257,15 @@ const stopAllSimulations = async (req, res) => {
 const getSimulationStatus = async (req, res) => {
     try {
         const activeSimulations = Array.from(gpsSimulator.activeSimulations.keys());
+        const hasRentedMotorbikes = await gpsSimulator.hasRentedMotorbikes();
 
         res.status(200).json({
             success: true,
             message: 'Retrieved simulation status',
             data: {
                 activeSimulations,
-                totalActive: activeSimulations.length
+                totalActive: activeSimulations.length,
+                hasRentedMotorbikes
             }
         });
     } catch (error) {
@@ -250,7 +278,7 @@ const getSimulationStatus = async (req, res) => {
     }
 };
 
-// Manual location update from frontend simulation
+// Manual location update from frontend simulation (only for rented motorbikes)
 const manualUpdateLocation = async (req, res) => {
     try {
         const { motorbikeId, latitude, longitude, speed, heading, timestamp, isActive } = req.body;
@@ -260,6 +288,22 @@ const manualUpdateLocation = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'MotorbikeId, latitude, and longitude are required'
+            });
+        }
+
+        // Check if motorbike exists and is rented
+        const motorbike = await MotorbikeModel.findById(motorbikeId);
+        if (!motorbike) {
+            return res.status(404).json({
+                success: false,
+                message: 'Motorbike not found'
+            });
+        }
+
+        if (motorbike.status !== 'rented') {
+            return res.status(403).json({
+                success: false,
+                message: 'Location updates are only allowed for rented motorbikes'
             });
         }
 
@@ -304,6 +348,87 @@ const manualUpdateLocation = async (req, res) => {
     }
 };
 
+// Get location data only from rented motorbikes and save to database
+const getAndSaveRentedMotorbikeLocations = async (req, res) => {
+    try {
+        // Get all rented motorbikes
+        const rentedMotorbikes = await MotorbikeModel.find({ status: 'rented' })
+            .populate('motorbikeType')
+            .populate('branchId');
+
+        if (rentedMotorbikes.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No rented motorbikes found',
+                data: []
+            });
+        }
+
+        const locationsWithMotorbikes = [];
+
+        for (const motorbike of rentedMotorbikes) {
+            // Generate new location data for the motorbike
+            const newLocation = await gpsSimulator.generateMovementPattern(
+                motorbike.lastKnownLatitude || 10.762622, // Default to Ho Chi Minh City
+                motorbike.lastKnownLongitude || 106.660172
+            );
+
+            // Save the new location to database
+            const savedLocation = await LocationModel.create({
+                motorbikeId: motorbike._id,
+                latitude: newLocation.latitude,
+                longitude: newLocation.longitude,
+                speed: newLocation.speed,
+                heading: newLocation.heading,
+                timestamp: new Date(),
+                isActive: true
+            });
+
+            // Update motorbike's last known position
+            await MotorbikeModel.findByIdAndUpdate(motorbike._id, {
+                lastKnownLatitude: newLocation.latitude,
+                lastKnownLongitude: newLocation.longitude
+            });
+
+            locationsWithMotorbikes.push({
+                motorbike: {
+                    _id: motorbike._id,
+                    code: motorbike.code,
+                    motorbikeType: motorbike.motorbikeType,
+                    branchId: motorbike.branchId,
+                    status: motorbike.status
+                },
+                location: savedLocation
+            });
+
+            // Emit real-time update via Socket.IO
+            if (global.io) {
+                global.io.to(`motorbike-${motorbike._id}`).emit('location-update', {
+                    motorbikeId: motorbike._id,
+                    latitude: newLocation.latitude,
+                    longitude: newLocation.longitude,
+                    speed: newLocation.speed,
+                    heading: newLocation.heading,
+                    timestamp: savedLocation.timestamp
+                });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Retrieved and saved location data for ${rentedMotorbikes.length} rented motorbikes`,
+            data: locationsWithMotorbikes
+        });
+    } catch (error) {
+        console.error('Error getting and saving rented motorbike locations:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving and saving motorbike locations',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllRentedMotorbikeLocations,
     getMotorbikeLocation,
@@ -313,5 +438,6 @@ module.exports = {
     startAllRentedSimulations,
     stopAllSimulations,
     getSimulationStatus,
-    manualUpdateLocation
+    manualUpdateLocation,
+    getAndSaveRentedMotorbikeLocations
 }; 

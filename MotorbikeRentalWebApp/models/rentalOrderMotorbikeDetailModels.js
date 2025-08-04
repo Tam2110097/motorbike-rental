@@ -25,6 +25,11 @@ const rentalOrderMotorbikeDetailSchema = new mongoose.Schema({
         type: Number,
         required: [false, 'damageWaiverFee is required'],
         min: [0, 'damageWaiverFee cannot be negative']
+    },
+    duration: {
+        type: Number,
+        required: [true, 'duration is required'],
+        min: [1, 'duration must be at least 1']
     }
 }, {
     timestamps: true

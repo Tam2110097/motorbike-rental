@@ -79,9 +79,11 @@ async function suggestMotorbikeTypesFromTripContext(tripContext, branchReceiveId
     // 7. Sắp xếp theo điểm gợi ý giảm dần
     scoredTypes.sort((a, b) => b.score - a.score);
 
-    // 8. Lấy chi tiết motorbikeType tương ứng
+    // 8. Lấy chi tiết motorbikeType tương ứng với pricing rule
     const typeIds = scoredTypes.map(item => item.typeId);
-    const types = await motorbikeTypeModel.find({ _id: { $in: typeIds }, isActive: true }).lean();
+    const types = await motorbikeTypeModel.find({ _id: { $in: typeIds }, isActive: true })
+        .populate('pricingRule')
+        .lean();
 
     // 9. Kết hợp dữ liệu chi tiết với điểm gợi ý
     const result = types.map(type => {

@@ -34,6 +34,15 @@ const syncGPSSimulations = async () => {
     try {
         console.log('Syncing GPS simulations with motorbike statuses...');
 
+        // Check if there are any rented motorbikes
+        const hasRentedMotorbikes = await gpsSimulator.hasRentedMotorbikes();
+
+        if (!hasRentedMotorbikes) {
+            console.log('No rented motorbikes found, stopping all GPS simulations');
+            await gpsSimulator.stopAllSimulations();
+            return;
+        }
+
         // Get all motorbikes
         const allMotorbikes = await MotorbikeModel.find({});
 
@@ -57,9 +66,24 @@ const syncGPSSimulations = async () => {
     }
 };
 
+// Function to check and stop all simulations if no rented motorbikes
+const checkAndStopSimulationsIfNoRented = async () => {
+    try {
+        const hasRentedMotorbikes = await gpsSimulator.hasRentedMotorbikes();
+
+        if (!hasRentedMotorbikes) {
+            console.log('No rented motorbikes found, stopping all GPS simulations');
+            await gpsSimulator.stopAllSimulations();
+        }
+    } catch (error) {
+        console.error('Error checking for rented motorbikes:', error);
+    }
+};
+
 // Export functions for use in other parts of the application
 module.exports = {
     startSimulationForRentedMotorbike,
     stopSimulationForNonRentedMotorbike,
-    syncGPSSimulations
+    syncGPSSimulations,
+    checkAndStopSimulationsIfNoRented
 }; 

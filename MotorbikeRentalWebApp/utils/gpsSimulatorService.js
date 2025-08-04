@@ -7,6 +7,17 @@ class GPSSimulatorService {
         this.simulationIntervals = new Map(); // Map to store interval IDs
     }
 
+    // Check if there are any rented motorbikes
+    async hasRentedMotorbikes() {
+        try {
+            const rentedCount = await MotorbikeModel.countDocuments({ status: 'rented' });
+            return rentedCount > 0;
+        } catch (error) {
+            console.error('Error checking for rented motorbikes:', error);
+            return false;
+        }
+    }
+
     // Generate random coordinates within a bounding box (Ho Chi Minh City area)
     generateRandomCoordinates() {
         // Ho Chi Minh City bounding box
@@ -73,6 +84,13 @@ class GPSSimulatorService {
                 return;
             }
 
+            // Check if motorbike is still rented
+            const motorbike = await MotorbikeModel.findById(motorbikeId);
+            if (!motorbike || motorbike.status !== 'rented') {
+                console.log(`Motorbike ${motorbikeId} is not rented, skipping simulation`);
+                return;
+            }
+
             // Get initial coordinates
             const initialCoords = this.generateRandomCoordinates();
 
@@ -84,7 +102,7 @@ class GPSSimulatorService {
                 heading: 0
             });
 
-            // Save initial location to database
+            // Save initial location to database only if motorbike is rented
             await this.saveLocation(motorbikeId, initialCoords.latitude, initialCoords.longitude, 0, 0);
 
             // Start interval for location updates
@@ -109,6 +127,14 @@ class GPSSimulatorService {
                 return;
             }
 
+            // Check if motorbike is still rented before updating
+            const motorbike = await MotorbikeModel.findById(motorbikeId);
+            if (!motorbike || motorbike.status !== 'rented') {
+                console.log(`Motorbike ${motorbikeId} is no longer rented, stopping simulation`);
+                await this.stopSimulation(motorbikeId);
+                return;
+            }
+
             // Generate new movement
             const newMovement = this.generateMovementPattern(currentData.latitude, currentData.longitude);
 
@@ -120,7 +146,7 @@ class GPSSimulatorService {
                 heading: newMovement.heading
             });
 
-            // Save to database
+            // Save to database only if motorbike is rented
             await this.saveLocation(
                 motorbikeId,
                 newMovement.latitude,
@@ -143,6 +169,13 @@ class GPSSimulatorService {
     // Save location to database
     async saveLocation(motorbikeId, latitude, longitude, speed, heading) {
         try {
+            // Double-check that motorbike is still rented before saving
+            const motorbike = await MotorbikeModel.findById(motorbikeId);
+            if (!motorbike || motorbike.status !== 'rented') {
+                console.log(`Not saving location for motorbike ${motorbikeId} - not rented`);
+                return;
+            }
+
             const locationData = new LocationModel({
                 motorbikeId,
                 latitude,
@@ -200,6 +233,11 @@ class GPSSimulatorService {
             const rentedMotorbikes = await MotorbikeModel.find({ status: 'rented' });
 
             console.log(`Found ${rentedMotorbikes.length} rented motorbikes`);
+
+            if (rentedMotorbikes.length === 0) {
+                console.log('No rented motorbikes found, skipping GPS simulation start');
+                return;
+            }
 
             for (const motorbike of rentedMotorbikes) {
                 await this.startSimulation(motorbike._id);

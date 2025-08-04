@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { MdOutlineAddBox } from 'react-icons/md'
 import { AiOutlineEdit } from 'react-icons/ai'
 import { MdOutlineDelete } from 'react-icons/md'
-import { Form, message, Select, Button } from 'antd'
+import { Form, message, Select, Button, Tabs } from 'antd'
 
 const MotorbikePage = () => {
     const [motorbikes, setMotorbikes] = useState([]);
@@ -101,6 +101,36 @@ const MotorbikePage = () => {
         return <span className={`badge ${config.className}`}>{config.text}</span>;
     }
 
+    // Group motorbikes by status
+    const groupMotorbikesByStatus = (motorbikes) => {
+        const grouped = {
+            available: [],
+            rented: [],
+            maintenance: [],
+            out_of_service: [],
+            reserved: []
+        };
+
+        motorbikes.forEach(motorbike => {
+            if (grouped[motorbike.status]) {
+                grouped[motorbike.status].push(motorbike);
+            }
+        });
+
+        return grouped;
+    };
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'available': return 'Có sẵn';
+            case 'rented': return 'Đã thuê';
+            case 'maintenance': return 'Đang sửa chữa';
+            case 'out_of_service': return 'Đã hỏng';
+            case 'reserved': return 'Đã đặt';
+            default: return status;
+        }
+    };
+
     useEffect(() => {
         getAllMotorbikes();
         getAllBranch();
@@ -135,102 +165,6 @@ const MotorbikePage = () => {
                         </Button>
                     </Link>
                 </div>
-
-                {/* Motorbikes Table */}
-                <div className="table-responsive">
-                    <table className="table table-bordered table-hover">
-                        <thead className="table-dark text-center">
-                            <tr>
-                                <th>STT</th>
-                                <th>Mã xe</th>
-                                <th>Loại xe</th>
-                                {!selectedBranchId && <th>Chi nhánh</th>}
-                                <th>Hình ảnh biển số</th>
-                                <th>Trạng thái</th>
-                                <th>Ngày tạo</th>
-                                <th>Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={selectedBranchId ? 7 : 8} className="text-center">
-                                        <div className="spinner-border" role="status">
-                                            <span className="visually-hidden">Loading...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : motorbikes.length === 0 ? (
-                                <tr>
-                                    <td colSpan={selectedBranchId ? 7 : 8} className="text-center">
-                                        {selectedBranchId ? 'Không có xe máy nào trong chi nhánh này' : 'Không có xe máy nào'}
-                                    </td>
-                                </tr>
-                            ) : (
-                                motorbikes.map((motorbike, index) => (
-                                    <tr key={motorbike._id} className="align-middle text-center">
-                                        <td>{index + 1}</td>
-                                        <td>
-                                            <strong>{motorbike.code}</strong>
-                                        </td>
-                                        <td>
-                                            <div>
-                                                <strong>{motorbike.motorbikeType?.name}</strong>
-                                                <br />
-                                                <small className="text-muted">
-                                                    Giá: {motorbike.motorbikeType?.price?.toLocaleString('vi-VN')} VNĐ
-                                                </small>
-                                            </div>
-                                        </td>
-                                        {!selectedBranchId && (
-                                            <td>
-                                                <strong>{motorbike.branchId?.city}</strong>
-                                                <br />
-                                                <small className="text-muted">
-                                                    {motorbike.branchId?.address}
-                                                </small>
-                                            </td>
-                                        )}
-                                        <td>
-                                            {motorbike.licensePlateImage ? (
-                                                <img
-                                                    src={`http://localhost:8080${motorbike.licensePlateImage}`}
-                                                    alt="Biển số xe"
-                                                    style={{
-                                                        width: "80px",
-                                                        height: "60px",
-                                                        objectFit: "cover",
-                                                        borderRadius: "4px"
-                                                    }}
-                                                    className="img-thumbnail"
-                                                />
-                                            ) : (
-                                                <span className="text-muted">Không có ảnh</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {getStatusBadge(motorbike.status)}
-                                        </td>
-                                        <td>
-                                            {new Date(motorbike.createdAt).toLocaleDateString('vi-VN')}
-                                        </td>
-                                        <td>
-                                            <div className="d-flex justify-content-center gap-2">
-                                                <Link to={`/employee/motorbike/update/${motorbike._id}`}>
-                                                    <AiOutlineEdit className="fs-4 text-warning" title="Chỉnh sửa" />
-                                                </Link>
-                                                <Link to={`/employee/motorbike/delete/${motorbike._id}`}>
-                                                    <MdOutlineDelete className="fs-4 text-danger" title="Xóa" />
-                                                </Link>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
                 {/* Summary */}
                 <div className="mt-3">
                     <div className="row">
@@ -267,6 +201,202 @@ const MotorbikePage = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Motorbikes Table with Tabs */}
+                <div className="table-responsive">
+                    <Tabs
+                        defaultActiveKey="all"
+                        style={{ background: '#fff', padding: '20px', borderRadius: '12px' }}
+                        items={[
+                            {
+                                key: 'all',
+                                label: `Tất cả (${motorbikes.length})`,
+                                children: (
+                                    <table className="table table-bordered table-hover">
+                                        <thead className="table-dark text-center">
+                                            <tr>
+                                                <th>STT</th>
+                                                <th>Mã xe</th>
+                                                <th>Loại xe</th>
+                                                {!selectedBranchId && <th>Chi nhánh</th>}
+                                                <th>Hình ảnh biển số</th>
+                                                <th>Trạng thái</th>
+                                                <th>Ngày tạo</th>
+                                                <th>Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {loading ? (
+                                                <tr>
+                                                    <td colSpan={selectedBranchId ? 7 : 8} className="text-center">
+                                                        <div className="spinner-border" role="status">
+                                                            <span className="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : motorbikes.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={selectedBranchId ? 7 : 8} className="text-center">
+                                                        {selectedBranchId ? 'Không có xe máy nào trong chi nhánh này' : 'Không có xe máy nào'}
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                motorbikes.map((motorbike, index) => (
+                                                    <tr key={motorbike._id} className="align-middle text-center">
+                                                        <td>{index + 1}</td>
+                                                        <td>
+                                                            <strong>{motorbike.code}</strong>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <strong>{motorbike.motorbikeType?.name}</strong>
+                                                                <br />
+                                                                <small className="text-muted">
+                                                                    Giá: {motorbike.motorbikeType?.price?.toLocaleString('vi-VN')} VNĐ
+                                                                </small>
+                                                            </div>
+                                                        </td>
+                                                        {!selectedBranchId && (
+                                                            <td>
+                                                                <strong>{motorbike.branchId?.city}</strong>
+                                                                <br />
+                                                                <small className="text-muted">
+                                                                    {motorbike.branchId?.address}
+                                                                </small>
+                                                            </td>
+                                                        )}
+                                                        <td>
+                                                            {motorbike.licensePlateImage ? (
+                                                                <img
+                                                                    src={`http://localhost:8080${motorbike.licensePlateImage}`}
+                                                                    alt="Biển số xe"
+                                                                    style={{
+                                                                        width: "80px",
+                                                                        height: "60px",
+                                                                        objectFit: "cover",
+                                                                        borderRadius: "4px"
+                                                                    }}
+                                                                    className="img-thumbnail"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-muted">Không có ảnh</span>
+                                                            )}
+                                                        </td>
+                                                        <td>
+                                                            {getStatusBadge(motorbike.status)}
+                                                        </td>
+                                                        <td>
+                                                            {new Date(motorbike.createdAt).toLocaleDateString('vi-VN')}
+                                                        </td>
+                                                        <td>
+                                                            <div className="d-flex justify-content-center gap-2">
+                                                                <Link to={`/employee/motorbike/update/${motorbike._id}`}>
+                                                                    <AiOutlineEdit className="fs-4 text-warning" title="Chỉnh sửa" />
+                                                                </Link>
+                                                                <Link to={`/employee/motorbike/delete/${motorbike._id}`}>
+                                                                    <MdOutlineDelete className="fs-4 text-danger" title="Xóa" />
+                                                                </Link>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                )
+                            },
+                            ...Object.entries(groupMotorbikesByStatus(motorbikes)).map(([status, statusMotorbikes]) => ({
+                                key: status,
+                                label: (
+                                    <span>
+                                        {getStatusLabel(status)} ({statusMotorbikes.length})
+                                    </span>
+                                ),
+                                children: statusMotorbikes.length > 0 ? (
+                                    <table className="table table-bordered table-hover">
+                                        <thead className="table-dark text-center">
+                                            <tr>
+                                                <th>STT</th>
+                                                <th>Mã xe</th>
+                                                <th>Loại xe</th>
+                                                {!selectedBranchId && <th>Chi nhánh</th>}
+                                                <th>Hình ảnh biển số</th>
+                                                <th>Trạng thái</th>
+                                                <th>Ngày tạo</th>
+                                                <th>Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {statusMotorbikes.map((motorbike, index) => (
+                                                <tr key={motorbike._id} className="align-middle text-center">
+                                                    <td>{index + 1}</td>
+                                                    <td>
+                                                        <strong>{motorbike.code}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <strong>{motorbike.motorbikeType?.name}</strong>
+                                                            <br />
+                                                            <small className="text-muted">
+                                                                Giá: {motorbike.motorbikeType?.price?.toLocaleString('vi-VN')} VNĐ
+                                                            </small>
+                                                        </div>
+                                                    </td>
+                                                    {!selectedBranchId && (
+                                                        <td>
+                                                            <strong>{motorbike.branchId?.city}</strong>
+                                                            <br />
+                                                            <small className="text-muted">
+                                                                {motorbike.branchId?.address}
+                                                            </small>
+                                                        </td>
+                                                    )}
+                                                    <td>
+                                                        {motorbike.licensePlateImage ? (
+                                                            <img
+                                                                src={`http://localhost:8080${motorbike.licensePlateImage}`}
+                                                                alt="Biển số xe"
+                                                                style={{
+                                                                    width: "80px",
+                                                                    height: "60px",
+                                                                    objectFit: "cover",
+                                                                    borderRadius: "4px"
+                                                                }}
+                                                                className="img-thumbnail"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-muted">Không có ảnh</span>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {getStatusBadge(motorbike.status)}
+                                                    </td>
+                                                    <td>
+                                                        {new Date(motorbike.createdAt).toLocaleDateString('vi-VN')}
+                                                    </td>
+                                                    <td>
+                                                        <div className="d-flex justify-content-center gap-2">
+                                                            <Link to={`/employee/motorbike/update/${motorbike._id}`}>
+                                                                <AiOutlineEdit className="fs-4 text-warning" title="Chỉnh sửa" />
+                                                            </Link>
+                                                            <Link to={`/employee/motorbike/delete/${motorbike._id}`}>
+                                                                <MdOutlineDelete className="fs-4 text-danger" title="Xóa" />
+                                                            </Link>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                        Không có xe máy nào ở trạng thái "{getStatusLabel(status)}"
+                                    </div>
+                                )
+                            }))
+                        ]}
+                    />
                 </div>
             </div>
         </AdminLayout>

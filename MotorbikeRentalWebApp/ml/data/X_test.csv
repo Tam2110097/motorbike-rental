@@ -1,0 +1,3 @@
+Hour,Temperature(°C),Humidity(%),Wind speed (m/s),Visibility (10m),Dew point temperature(°C),Solar Radiation (MJ/m2),Rainfall(mm),Season,Holiday
+13.0,32.3,62.5,1.9,1300.0,24.75,3.25,0.0,Summer,No
+13.0,30.6,69.0,1.8,1150.0,24.1,3.45,0.8,Summer,No

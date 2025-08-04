@@ -313,6 +313,115 @@ const getAllMaintenance = async (req, res) => {
     }
 };
 
+// Schedule maintenance for motorbikes (direct scheduling)
+const scheduleMaintenance = async (req, res) => {
+    try {
+        const { motorbikeIds, level, description, startDate, estimatedEndDate, feeIfNoInsurance } = req.body;
+
+        console.log('=== SCHEDULE MAINTENANCE REQUEST ===');
+        console.log('Request body:', req.body);
+
+        // Validate required fields
+        if (!motorbikeIds || !Array.isArray(motorbikeIds) || motorbikeIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng chọn ít nhất một xe máy'
+            });
+        }
+
+        if (!level || !MAINTENANCE_LEVELS[level]) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cấp độ bảo dưỡng không hợp lệ'
+            });
+        }
+
+        if (!description) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập mô tả bảo dưỡng'
+            });
+        }
+
+        if (!startDate || !estimatedEndDate) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng chọn ngày bắt đầu và dự kiến hoàn thành'
+            });
+        }
+
+        const maintenanceRecords = [];
+
+        // Process each motorbike
+        for (const motorbikeId of motorbikeIds) {
+            // Check if motorbike exists and is available for maintenance
+            const motorbike = await motorbikeModel.findById(motorbikeId);
+            if (!motorbike) {
+                return res.status(404).json({
+                    success: false,
+                    message: `Không tìm thấy xe máy với ID: ${motorbikeId}`
+                });
+            }
+
+            if (motorbike.status === 'maintenance' || motorbike.status === 'out_of_service') {
+                return res.status(400).json({
+                    success: false,
+                    message: `Xe máy ${motorbike.code} đã trong trạng thái bảo dưỡng hoặc hỏng`
+                });
+            }
+
+            // Get motorbike type for fee calculation
+            const motorbikeType = await motorbikeTypeModel.findById(motorbike.motorbikeType);
+            const vehicleValue = motorbikeType?.price || 0;
+            const calculatedFee = Math.round(vehicleValue * MAINTENANCE_LEVELS[level].feePercentage / 100);
+            const finalFee = feeIfNoInsurance || calculatedFee;
+
+            // Create maintenance record
+            const maintenance = await maintenanceModel.create({
+                motorbikeId,
+                level,
+                description,
+                startDate: new Date(startDate),
+                estimatedEndDate: new Date(estimatedEndDate),
+                feeIfNoInsurance: finalFee,
+                status: 'in_progress'
+            });
+
+            maintenanceRecords.push(maintenance);
+
+            // Update motorbike status to maintenance
+            await motorbikeModel.findByIdAndUpdate(motorbikeId, {
+                status: 'maintenance'
+            });
+
+            console.log(`Created maintenance for motorbike ${motorbike.code}:`, maintenance._id);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Lên lịch bảo dưỡng thành công',
+            maintenanceRecords: maintenanceRecords.map(record => ({
+                id: record._id,
+                motorbikeId: record.motorbikeId,
+                level: record.level,
+                description: record.description,
+                startDate: record.startDate,
+                estimatedEndDate: record.estimatedEndDate,
+                fee: record.feeIfNoInsurance
+            })),
+            totalScheduled: maintenanceRecords.length
+        });
+    } catch (error) {
+        console.error('=== SCHEDULE MAINTENANCE ERROR ===');
+        console.error('Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lên lịch bảo dưỡng',
+            error: error.message
+        });
+    }
+};
+
 // Complete maintenance
 const completeMaintenance = async (req, res) => {
     try {
@@ -362,5 +471,6 @@ module.exports = {
     getOrderMotorbikesForMaintenance,
     createMaintenanceForOrder,
     getAllMaintenance,
-    completeMaintenance
+    completeMaintenance,
+    scheduleMaintenance
 };

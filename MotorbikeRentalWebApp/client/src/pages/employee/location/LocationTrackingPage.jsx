@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useRef } from 'react';
+import AdminLayout from '../../../components/AdminLayout';
 
 // Sửa lỗi không hiển thị icon marker mặc định của Leaflet khi dùng với Vite/React
 // (dùng link trực tiếp từ unpkg giống PickAddress.jsx)
@@ -226,6 +227,32 @@ const LocationTrackingPage = () => {
         }
     };
 
+    // Get and save location data only from rented motorbikes
+    const getAndSaveRentedMotorbikeLocations = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/v1/employee/location/rented-motorbikes/save', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (response.data.data.length > 0) {
+                toast.success(`Retrieved and saved location data for ${response.data.data.length} rented motorbikes`);
+                // Update the rented motorbikes list with new location data
+                setRentedMotorbikes(response.data.data);
+            } else {
+                toast.info('No rented motorbikes found');
+            }
+        } catch (error) {
+            console.error('Error getting and saving rented motorbike locations:', error);
+            toast.error('Failed to get and save motorbike locations');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Fetch simulation status
     const fetchSimulationStatus = async () => {
         try {
@@ -347,239 +374,574 @@ const LocationTrackingPage = () => {
     console.log('Vị trí các xe đang di chuyển:', motorbikePositions);
 
     return (
-        <div className="p-6">
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-800 mb-4">GPS Location Tracking</h1>
-                <p className="text-gray-600">Monitor real-time location of rented motorbikes</p>
-            </div>
+        <AdminLayout>
+            <div className="p-2" style={{ background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', minHeight: '100vh' }}>
+                <style>
+                    {`
+                    .location-tracking-header {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 32px;
+                        border-radius: 16px;
+                        margin-bottom: 32px;
+                        text-align: center;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                    }
 
-            {/* Bản đồ vị trí các xe đang thuê */}
-            <div className="my-6">
-                <h2 className="text-xl font-semibold mb-2">Bản đồ vị trí các xe đang thuê</h2>
-                <MapContainer
-                    center={userPosition || [10.7769, 106.7009]}
-                    zoom={12}
-                    style={{ height: '400px', width: '100%' }}
-                >
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution="&copy; OpenStreetMap contributors"
-                    />
-                    {/* Marker vị trí hiện tại của bạn */}
-                    {userPosition && (
-                        <Marker position={userPosition}>
-                            <Popup>Vị trí của bạn</Popup>
-                        </Marker>
-                    )}
+                    .location-tracking-header h1 {
+                        margin: 0;
+                        font-size: 32px;
+                        font-weight: 700;
+                        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                        margin-bottom: 8px;
+                    }
 
-                    {/* Render marker cho từng xe đang di chuyển (giống như REALTIME_TRACKER) */}
-                    {Object.entries(motorbikePositions).map(([motorbikeId, position]) => {
-                        const motorbike = rentedMotorbikes.find(item => item.motorbike._id === motorbikeId);
-                        if (!motorbike) return null;
+                    .location-tracking-header p {
+                        margin: 0;
+                        font-size: 16px;
+                        opacity: 0.9;
+                        font-weight: 400;
+                    }
 
-                        const [lat, lng] = position;
-                        return (
-                            <Marker
-                                key={motorbikeId}
-                                position={[lat, lng]}
-                                icon={L.icon({
-                                    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-                                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-                                    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-                                    iconSize: [25, 41],
-                                    iconAnchor: [12, 41],
-                                    popupAnchor: [1, -34],
-                                    shadowSize: [41, 41],
-                                })}
-                            >
-                                <Popup>
-                                    <div>
-                                        <strong>{motorbike.motorbike.code}</strong><br />
-                                        {motorbike.motorbike.motorbikeType?.name}<br />
-                                        Vĩ độ: {lat.toFixed(5)}<br />
-                                        Kinh độ: {lng.toFixed(5)}<br />
-                                        <span style={{ color: 'green' }}>🔄 Đang di chuyển</span>
-                                    </div>
-                                </Popup>
+                    .map-container {
+                        background: white;
+                        border-radius: 16px;
+                        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+                        overflow: hidden;
+                        border: 1px solid #f0f0f0;
+                        margin-bottom: 24px;
+                    }
+
+                    .map-header {
+                        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                        padding: 20px;
+                        border-bottom: 1px solid #dee2e6;
+                        font-weight: 600;
+                        color: #495057;
+                        font-size: 18px;
+                    }
+
+                    .control-panel {
+                        background: white;
+                        border-radius: 16px;
+                        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+                        overflow: hidden;
+                        border: 1px solid #f0f0f0;
+                        margin-bottom: 24px;
+                    }
+
+                    .control-panel-header {
+                        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                        padding: 20px;
+                        border-bottom: 1px solid #dee2e6;
+                        font-weight: 600;
+                        color: #495057;
+                        font-size: 18px;
+                    }
+
+                    .control-buttons {
+                        padding: 24px;
+                        display: flex;
+                        gap: 16px;
+                        flex-wrap: wrap;
+                    }
+
+                    .control-button {
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        border: none;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                        min-width: 180px;
+                    }
+
+                    .control-button:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                    }
+
+                    .control-button:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                        transform: none;
+                    }
+
+                    .btn-start {
+                        background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+                        color: white;
+                    }
+
+                    .btn-stop {
+                        background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+                        color: white;
+                    }
+
+                    .btn-get {
+                        background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+                        color: white;
+                    }
+
+                    .status-info {
+                        padding: 16px 24px;
+                        background: #f8f9ff;
+                        border-top: 1px solid #e9ecef;
+                        font-size: 14px;
+                        color: #6c757d;
+                    }
+
+                    .motorbike-card {
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                        border: 1px solid #f0f0f0;
+                        transition: all 0.3s ease;
+                        cursor: pointer;
+                    }
+
+                    .motorbike-card:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+                    }
+
+                    .motorbike-card.selected {
+                        border-color: #1890ff;
+                        background: #f0f8ff;
+                        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+                    }
+
+                    .motorbike-card-content {
+                        padding: 20px;
+                    }
+
+                    .motorbike-info h3 {
+                        font-weight: 600;
+                        color: #1890ff;
+                        margin-bottom: 4px;
+                        font-size: 16px;
+                    }
+
+                    .motorbike-info p {
+                        color: #6c757d;
+                        margin-bottom: 4px;
+                        font-size: 14px;
+                    }
+
+                    .status-badge {
+                        padding: 4px 12px;
+                        border-radius: 20px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        text-transform: uppercase;
+                    }
+
+                    .status-active {
+                        background: #f6ffed;
+                        color: #52c41a;
+                        border: 1px solid #b7eb8f;
+                    }
+
+                    .status-inactive {
+                        background: #f5f5f5;
+                        color: #8c8c8c;
+                        border: 1px solid #d9d9d9;
+                    }
+
+                    .action-buttons {
+                        display: flex;
+                        gap: 8px;
+                        margin-top: 12px;
+                    }
+
+                    .action-btn {
+                        padding: 6px 12px;
+                        border-radius: 6px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        border: none;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+
+                    .action-btn:hover {
+                        transform: translateY(-1px);
+                    }
+
+                    .btn-start-small {
+                        background: #1890ff;
+                        color: white;
+                    }
+
+                    .btn-stop-small {
+                        background: #ff4d4f;
+                        color: white;
+                    }
+
+                    .position-info {
+                        margin-top: 12px;
+                        padding: 8px 12px;
+                        background: #f8f9fa;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        color: #6c757d;
+                        font-family: monospace;
+                    }
+
+                    .location-details-card {
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                        border: 1px solid #f0f0f0;
+                    }
+
+                    .location-details-header {
+                        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                        padding: 20px;
+                        border-bottom: 1px solid #dee2e6;
+                        font-weight: 600;
+                        color: #495057;
+                        font-size: 18px;
+                    }
+
+                    .location-details-content {
+                        padding: 20px;
+                    }
+
+                    .current-location-box {
+                        background: linear-gradient(135deg, #f0f8ff 0%, #e6f7ff 100%);
+                        border: 1px solid #91d5ff;
+                        border-radius: 8px;
+                        padding: 16px;
+                        margin-bottom: 20px;
+                    }
+
+                    .location-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 16px;
+                    }
+
+                    .location-item {
+                        display: flex;
+                        flex-direction: column;
+                    }
+
+                    .location-label {
+                        font-size: 12px;
+                        color: #6c757d;
+                        margin-bottom: 4px;
+                        font-weight: 500;
+                    }
+
+                    .location-value {
+                        font-family: monospace;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #1890ff;
+                    }
+
+                    .location-history {
+                        max-height: 300px;
+                        overflow-y: auto;
+                    }
+
+                    .history-item {
+                        background: #f8f9fa;
+                        border-radius: 6px;
+                        padding: 12px;
+                        margin-bottom: 8px;
+                        border: 1px solid #e9ecef;
+                    }
+
+                    .history-coordinates {
+                        font-family: monospace;
+                        font-size: 12px;
+                        color: #495057;
+                        margin-bottom: 4px;
+                    }
+
+                    .history-time {
+                        font-size: 11px;
+                        color: #6c757d;
+                        text-align: right;
+                    }
+
+                    .history-details {
+                        font-size: 11px;
+                        color: #6c757d;
+                        margin-top: 4px;
+                    }
+
+                    .empty-state {
+                        text-align: center;
+                        padding: 40px 20px;
+                        color: #6c757d;
+                    }
+
+                    .empty-state-icon {
+                        font-size: 48px;
+                        margin-bottom: 16px;
+                        opacity: 0.5;
+                    }
+                `}
+                </style>
+
+                <div className="location-tracking-header">
+                    <h1>🚗 GPS Location Tracking</h1>
+                    <p>Monitor real-time location of rented motorbikes with live updates</p>
+                </div>
+
+                {/* Bản đồ vị trí các xe đang thuê */}
+                <div className="map-container">
+                    <div className="map-header">
+                        🗺️ Bản đồ vị trí các xe đang thuê
+                    </div>
+                    <MapContainer
+                        center={userPosition || [10.7769, 106.7009]}
+                        zoom={12}
+                        style={{ height: '500px', width: '100%' }}
+                    >
+                        <TileLayer
+                            // url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            // attribution="&copy; OpenStreetMap contributors"
+                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+                            attribution='Tiles &copy; Esri'
+                        />
+                        {/* Marker vị trí hiện tại của bạn */}
+                        {userPosition && (
+                            <Marker position={userPosition}>
+                                <Popup>Vị trí của bạn</Popup>
                             </Marker>
-                        );
-                    })}
-                </MapContainer>
-            </div>
+                        )}
 
-            {/* Control Panel */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4">Simulation Controls</h2>
-                <div className="flex gap-4 mb-4">
-                    <button
-                        onClick={startAllSimulations}
-                        disabled={loading}
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-                    >
-                        {loading ? 'Starting...' : 'Start All Simulations'}
-                    </button>
-                    <button
-                        onClick={stopAllSimulations}
-                        disabled={loading}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-                    >
-                        {loading ? 'Stopping...' : 'Stop All Simulations'}
-                    </button>
-                </div>
-                <div className="text-sm text-gray-600">
-                    Active Simulations: {simulationStatus?.totalActive ?? 0}
-                </div>
-            </div>
+                        {/* Render marker cho từng xe đang di chuyển (giống như REALTIME_TRACKER) */}
+                        {Object.entries(motorbikePositions).map(([motorbikeId, position]) => {
+                            const motorbike = rentedMotorbikes.find(item => item.motorbike._id === motorbikeId);
+                            if (!motorbike) return null;
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Rented Motorbikes List */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-semibold mb-4">Rented Motorbikes</h2>
-                    {loading ? (
-                        <div className="text-center py-4">Loading...</div>
-                    ) : (
-                        <div className="space-y-3">
-                            {(rentedMotorbikes || []).map((item) => {
-                                const isActive = simulationStatus.activeSimulations?.includes(item.motorbike._id);
-                                const currentPosition = motorbikePositions[item.motorbike._id];
-                                return (
-                                    <div
-                                        key={item.motorbike._id}
-                                        className={`border rounded-lg p-4 cursor-pointer transition-colors ${selectedMotorbike?._id === item.motorbike._id
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                            }`}
-                                        onClick={() => handleMotorbikeSelect(item.motorbike)}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-semibold text-gray-800">
-                                                    {item.motorbike.code}
-                                                </h3>
-                                                <p className="text-sm text-gray-600">
-                                                    {item.motorbike.motorbikeType?.name || 'Unknown Type'}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    Branch: {item.motorbike.branchId?.name || 'Unknown Branch'}
-                                                </p>
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs ${isActive
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-gray-100 text-gray-800'
-                                                    }`}>
-                                                    {isActive ? 'Active' : 'Inactive'}
-                                                </span>
-                                                <div className="flex gap-1">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            startMotorbikeSimulation(item.motorbike._id);
-                                                        }}
-                                                        className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                                                    >
-                                                        Start
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            stopMotorbikeSimulation(item.motorbike._id);
-                                                        }}
-                                                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
-                                                    >
-                                                        Stop
-                                                    </button>
+                            const [lat, lng] = position;
+                            return (
+                                <Marker
+                                    key={motorbikeId}
+                                    position={[lat, lng]}
+                                    icon={L.icon({
+                                        iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+                                        iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+                                        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+                                        iconSize: [25, 41],
+                                        iconAnchor: [12, 41],
+                                        popupAnchor: [1, -34],
+                                        shadowSize: [41, 41],
+                                    })}
+                                >
+                                    <Popup>
+                                        <div>
+                                            <strong>{motorbike.motorbike.code}</strong><br />
+                                            {motorbike.motorbike.motorbikeType?.name}<br />
+                                            Vĩ độ: {lat.toFixed(5)}<br />
+                                            Kinh độ: {lng.toFixed(5)}<br />
+                                            <span style={{ color: 'green' }}>🔄 Đang di chuyển</span>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            );
+                        })}
+                    </MapContainer>
+                </div>
+
+                {/* Control Panel */}
+                <div className="control-panel">
+                    <div className="control-panel-header">
+                        🎮 Simulation Controls
+                    </div>
+                    <div className="control-buttons">
+                        <button
+                            onClick={startAllSimulations}
+                            disabled={loading}
+                            className="control-button btn-start"
+                        >
+                            {loading ? '🔄 Starting...' : '▶️ Start All Simulations'}
+                        </button>
+                        <button
+                            onClick={stopAllSimulations}
+                            disabled={loading}
+                            className="control-button btn-stop"
+                        >
+                            {loading ? '🔄 Stopping...' : '⏹️ Stop All Simulations'}
+                        </button>
+                        <button
+                            onClick={getAndSaveRentedMotorbikeLocations}
+                            disabled={loading}
+                            className="control-button btn-get"
+                        >
+                            {loading ? '🔄 Processing...' : '📥 Get & Save Rented Locations'}
+                        </button>
+                    </div>
+                    <div className="status-info">
+                        <strong>📊 Status:</strong> Active Simulations: {simulationStatus?.totalActive ?? 0}
+                        {simulationStatus?.hasRentedMotorbikes !== undefined && (
+                            <span style={{ marginLeft: '16px' }}>
+                                Has Rented Motorbikes: {simulationStatus.hasRentedMotorbikes ? '✅ Yes' : '❌ No'}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Rented Motorbikes List */}
+                    <div className="motorbike-card">
+                        <div className="location-details-header">
+                            🏍️ Rented Motorbikes
+                        </div>
+                        <div className="location-details-content">
+                            {loading ? (
+                                <div className="empty-state">
+                                    <div className="empty-state-icon">🔄</div>
+                                    <div>Loading motorbikes...</div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {(rentedMotorbikes || []).map((item) => {
+                                        const isActive = simulationStatus.activeSimulations?.includes(item.motorbike._id);
+                                        const currentPosition = motorbikePositions[item.motorbike._id];
+                                        return (
+                                            <div
+                                                key={item.motorbike._id}
+                                                className={`motorbike-card ${selectedMotorbike?._id === item.motorbike._id ? 'selected' : ''}`}
+                                                onClick={() => handleMotorbikeSelect(item.motorbike)}
+                                            >
+                                                <div className="motorbike-card-content">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="motorbike-info">
+                                                            <h3>{item.motorbike.code}</h3>
+                                                            <p>{item.motorbike.motorbikeType?.name || 'Unknown Type'}</p>
+                                                            <p>Branch: {item.motorbike.branchId?.name || 'Unknown Branch'}</p>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2">
+                                                            <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
+                                                                {isActive ? '🟢 Active' : '⚪ Inactive'}
+                                                            </span>
+                                                            <div className="action-buttons">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        startMotorbikeSimulation(item.motorbike._id);
+                                                                    }}
+                                                                    className="action-btn btn-start-small"
+                                                                >
+                                                                    ▶️ Start
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        stopMotorbikeSimulation(item.motorbike._id);
+                                                                    }}
+                                                                    className="action-btn btn-stop-small"
+                                                                >
+                                                                    ⏹️ Stop
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {currentPosition && (
+                                                        <div className="position-info">
+                                                            📍 Current Position: {currentPosition[0].toFixed(6)}, {currentPosition[1].toFixed(6)}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                        </div>
-                                        {currentPosition && (
-                                            <div className="mt-2 text-xs text-gray-500">
-                                                Current Position: {currentPosition[0].toFixed(6)}, {currentPosition[1].toFixed(6)}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* Location Details */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-semibold mb-4">Location Details</h2>
-                    {selectedMotorbike ? (
-                        <div>
-                            <div className="mb-4">
-                                <h3 className="font-semibold text-gray-800 mb-2">
-                                    {selectedMotorbike.code}
-                                </h3>
-                                <p className="text-sm text-gray-600">
-                                    {selectedMotorbike.motorbikeType?.name || 'Unknown Type'}
-                                </p>
-                            </div>
-
-                            {/* Current Location */}
-                            {locationHistory.length > 0 && (
-                                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                                    <h4 className="font-semibold mb-2">Current Location</h4>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <span className="text-gray-600">Latitude:</span>
-                                            <p className="font-mono">{locationHistory[0].latitude.toFixed(6)}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-600">Longitude:</span>
-                                            <p className="font-mono">{locationHistory[0].longitude.toFixed(6)}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-600">Speed:</span>
-                                            <p>{locationHistory[0].speed.toFixed(1)} km/h</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-600">Heading:</span>
-                                            <p>{locationHistory[0].heading.toFixed(1)}°</p>
-                                        </div>
-                                    </div>
+                                        );
+                                    })}
                                 </div>
                             )}
+                        </div>
+                    </div>
 
-                            {/* Location History */}
-                            <div>
-                                <h4 className="font-semibold mb-2">Location History</h4>
-                                <div className="max-h-64 overflow-y-auto">
-                                    {locationHistory.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {locationHistory.slice(0, 10).map((location, index) => (
-                                                <div key={index} className="text-xs p-2 bg-gray-50 rounded">
-                                                    <div className="flex justify-between">
-                                                        <span>
-                                                            {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                                                        </span>
-                                                        <span className="text-gray-500">
-                                                            {new Date(location.timestamp).toLocaleTimeString()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-gray-500">
-                                                        Speed: {location.speed.toFixed(1)} km/h |
-                                                        Heading: {location.heading.toFixed(1)}°
-                                                    </div>
+                    {/* Location Details */}
+                    <div className="location-details-card">
+                        <div className="location-details-header">
+                            📍 Location Details
+                        </div>
+                        <div className="location-details-content">
+                            {selectedMotorbike ? (
+                                <div>
+                                    <div className="mb-4">
+                                        <h3 className="font-semibold text-gray-800 mb-2" style={{ color: '#1890ff', fontSize: '18px' }}>
+                                            {selectedMotorbike.code}
+                                        </h3>
+                                        <p className="text-sm text-gray-600">
+                                            {selectedMotorbike.motorbikeType?.name || 'Unknown Type'}
+                                        </p>
+                                    </div>
+
+                                    {/* Current Location */}
+                                    {locationHistory.length > 0 && (
+                                        <div className="current-location-box">
+                                            <h4 className="font-semibold mb-3" style={{ color: '#1890ff' }}>📍 Current Location</h4>
+                                            <div className="location-grid">
+                                                <div className="location-item">
+                                                    <span className="location-label">Latitude:</span>
+                                                    <span className="location-value">{locationHistory[0].latitude.toFixed(6)}</span>
                                                 </div>
-                                            ))}
+                                                <div className="location-item">
+                                                    <span className="location-label">Longitude:</span>
+                                                    <span className="location-value">{locationHistory[0].longitude.toFixed(6)}</span>
+                                                </div>
+                                                <div className="location-item">
+                                                    <span className="location-label">Speed:</span>
+                                                    <span className="location-value" style={{ color: '#52c41a' }}>{locationHistory[0].speed.toFixed(1)} km/h</span>
+                                                </div>
+                                                <div className="location-item">
+                                                    <span className="location-label">Heading:</span>
+                                                    <span className="location-value" style={{ color: '#fa8c16' }}>{locationHistory[0].heading.toFixed(1)}°</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <p className="text-gray-500 text-sm">No location history available</p>
                                     )}
+
+                                    {/* Location History */}
+                                    <div>
+                                        <h4 className="font-semibold mb-3" style={{ color: '#1890ff' }}>📊 Location History</h4>
+                                        <div className="location-history">
+                                            {locationHistory.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {locationHistory.slice(0, 10).map((location, index) => (
+                                                        <div key={index} className="history-item">
+                                                            <div className="flex justify-between">
+                                                                <span className="history-coordinates">
+                                                                    {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                                                                </span>
+                                                                <span className="history-time">
+                                                                    {new Date(location.timestamp).toLocaleTimeString()}
+                                                                </span>
+                                                            </div>
+                                                            <div className="history-details">
+                                                                Speed: {location.speed.toFixed(1)} km/h | Heading: {location.heading.toFixed(1)}°
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="empty-state">
+                                                    <div className="empty-state-icon">📊</div>
+                                                    <div>No location history available</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="empty-state">
+                                    <div className="empty-state-icon">🏍️</div>
+                                    <div>Select a motorbike to view location details</div>
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div className="text-center text-gray-500 py-8">
-                            Select a motorbike to view location details
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

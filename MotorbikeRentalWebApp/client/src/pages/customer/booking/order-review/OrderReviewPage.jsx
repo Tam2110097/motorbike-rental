@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Layout } from 'antd'
 import HeaderBar from '../../../../components/HeaderBar'
+import Footer from '../../../../components/Footer'
 import TripInformation from '../common/TripInformation'
 import ProductPriceDetail from './components/ProductPriceDetail'
 import CartsTotal from './components/CartsTotal'
@@ -50,7 +51,7 @@ const OrderReviewPage = () => {
     return (
         <Layout style={{ minHeight: '100vh' }}>
             <HeaderBar />
-            <Content style={{ padding: '24px', backgroundColor: '#f5f5f5' }}>
+            <Content style={{ padding: '24px', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                     <div style={{ marginBottom: 24 }}>
                         <h1 style={pageTitleStyle}>
@@ -100,6 +101,7 @@ const OrderReviewPage = () => {
                     </div>
                 </div>
             </Content>
+            <Footer />
         </Layout>
     )
 }

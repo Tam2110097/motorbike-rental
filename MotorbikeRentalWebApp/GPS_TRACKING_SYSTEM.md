@@ -2,7 +2,7 @@
 
 ## Overview
 
-This system provides real-time GPS tracking simulation for rented motorbikes. It automatically starts GPS simulation when a motorbike is rented and stops when the rental ends.
+This system provides real-time GPS tracking simulation for rented motorbikes. It automatically starts GPS simulation when a motorbike is rented and stops when the rental ends. **The system only saves location data to the database when there are rented motorbikes.**
 
 ## Features
 
@@ -11,16 +11,25 @@ This system provides real-time GPS tracking simulation for rented motorbikes. It
 - Simulates realistic movement patterns with speed and heading changes
 - Updates location every 5 seconds
 - Real-time updates via Socket.IO
+- **Only works with rented motorbikes**
 
 ### 📍 Location Tracking
 - Stores GPS coordinates, speed, heading, and timestamp
 - Maintains location history for each motorbike
 - Real-time location updates to connected clients
+- **Only saves location data for rented motorbikes**
 
 ### 🎮 Manual Controls
 - Start/stop GPS simulation for individual motorbikes
 - Start/stop GPS simulation for all rented motorbikes
 - Monitor simulation status and active simulations
+- **Get and save location data only from rented motorbikes**
+
+### 🔒 Security & Efficiency
+- **No location data is saved when there are no rented motorbikes**
+- **Only rented motorbikes can have their location tracked**
+- Automatic cleanup when motorbikes are no longer rented
+- Efficient resource usage by only tracking active rentals
 
 ## System Architecture
 
@@ -44,191 +53,85 @@ This system provides real-time GPS tracking simulation for rented motorbikes. It
 - Manages active simulations
 - Handles real-time updates via Socket.IO
 - Provides location history and current location
+- **Checks if motorbike is rented before saving location data**
+- **Stops simulations when motorbikes are no longer rented**
 
 #### 3. Location Controller (`controllers/employee-controller/locationCtrl.js`)
 - REST API endpoints for location management
 - Simulation control endpoints
 - Location history retrieval
+- **New endpoint: Get and save location data only from rented motorbikes**
+- **All endpoints now validate that motorbikes are rented before processing**
 
 #### 4. GPS Simulation Job (`jobs/gpsSimulationJob.js`)
 - Automatically starts GPS simulation for newly rented motorbikes
 - Stops GPS simulation when motorbike is no longer rented
 - Syncs simulations with motorbike statuses
+- **Checks if there are any rented motorbikes before starting simulations**
 
 ### Frontend Components
 
 #### Location Tracking Page (`client/src/pages/employee/location/LocationTrackingPage.jsx`)
 - Real-time location monitoring interface
 - Simulation control panel
-- Location history display
-- Socket.IO integration for live updates
+- **New button: "Get & Save Rented Locations"**
+- **Only displays and tracks rented motorbikes**
 
 ## API Endpoints
 
 ### Location Management
 - `GET /api/v1/employee/location/rented-motorbikes` - Get all rented motorbike locations
-- `GET /api/v1/employee/location/motorbike/:motorbikeId` - Get specific motorbike location
-- `GET /api/v1/employee/location/motorbike/:motorbikeId/history` - Get location history
+- `GET /api/v1/employee/location/rented-motorbikes/save` - **NEW: Get and save location data only from rented motorbikes**
+- `GET /api/v1/employee/location/motorbike/:motorbikeId` - Get specific motorbike location (rented only)
+- `GET /api/v1/employee/location/motorbike/:motorbikeId/history` - Get motorbike location history (rented only)
 
-### Simulation Controls
+### Simulation Control
 - `POST /api/v1/employee/location/simulation/start/:motorbikeId` - Start GPS simulation for specific motorbike
 - `POST /api/v1/employee/location/simulation/stop/:motorbikeId` - Stop GPS simulation for specific motorbike
 - `POST /api/v1/employee/location/simulation/start-all` - Start GPS simulation for all rented motorbikes
 - `POST /api/v1/employee/location/simulation/stop-all` - Stop all GPS simulations
 - `GET /api/v1/employee/location/simulation/status` - Get simulation status
+- `POST /api/v1/employee/location/simulation/manual` - Manual location update (rented motorbikes only)
 
-## Socket.IO Events
+## Key Changes
 
-### Client to Server
-- `join-location-room` - Join room for specific motorbike location updates
-- `leave-location-room` - Leave room for specific motorbike
+### 1. Rented Motorbike Validation
+- All location endpoints now validate that motorbikes are rented
+- Returns 403 error if trying to access location data for non-rented motorbikes
+- Automatic cleanup when motorbikes are no longer rented
 
-### Server to Client
-- `location-update` - Real-time location update for a motorbike
+### 2. Database Efficiency
+- No location data is saved when there are no rented motorbikes
+- Automatic stopping of simulations when motorbikes are returned
+- Efficient resource usage by only tracking active rentals
 
-## GPS Simulation Details
+### 3. New Frontend Feature
+- Added "Get & Save Rented Locations" button
+- Shows status of whether there are rented motorbikes
+- Only displays rented motorbikes in the interface
 
-### Coordinate Generation
-- Bounds: Ho Chi Minh City area (10.4°N - 11.0°N, 106.4°E - 107.0°E)
-- Realistic movement patterns with speed changes (0-60 km/h)
-- Heading changes with slight turns (±15 degrees)
-
-### Update Frequency
-- Location updates every 5 seconds
-- Real-time Socket.IO emissions
-- Database storage for location history
-
-## Installation & Setup
-
-### 1. Install Dependencies
-```bash
-# Server dependencies
-npm install socket.io
-
-# Client dependencies
-cd client
-npm install socket.io-client react-toastify
-```
-
-### 2. Database Setup
-The location model will be automatically created when the application starts.
-
-### 3. Start the Application
-```bash
-# Development
-npm run dev
-
-# Production
-npm start
-```
+### 4. Enhanced Security
+- Location data is only accessible for rented motorbikes
+- Prevents unauthorized access to location data
+- Automatic cleanup of location data when rentals end
 
 ## Usage
 
 ### For Employees
+1. Navigate to the Location Tracking page
+2. Use "Get & Save Rented Locations" to fetch and save location data only from rented motorbikes
+3. Start/stop GPS simulations as needed
+4. Monitor real-time location updates
 
-1. **Access Location Tracking**
-   - Navigate to the employee dashboard
-   - Click on "Location Tracking" in the sidebar
+### For System Administrators
+1. The system automatically manages GPS simulations based on motorbike rental status
+2. No manual intervention needed for basic functionality
+3. Monitor system logs for simulation status and errors
 
-2. **Monitor Rented Motorbikes**
-   - View all rented motorbikes with their current locations
-   - See simulation status (Active/Inactive)
+## Benefits
 
-3. **Control Simulations**
-   - Use "Start All Simulations" to begin GPS tracking for all rented motorbikes
-   - Use "Stop All Simulations" to stop all GPS tracking
-   - Individual motorbike controls available for each motorbike
-
-4. **View Location Details**
-   - Select a motorbike to view detailed location information
-   - See current location with coordinates, speed, and heading
-   - View location history with timestamps
-
-### Automatic Behavior
-
-- **When a motorbike is rented**: GPS simulation automatically starts
-- **When a motorbike is returned**: GPS simulation automatically stops
-- **Server restart**: All GPS simulations are synced with current motorbike statuses
-
-## Configuration
-
-### GPS Simulation Settings
-Location: `utils/gpsSimulatorService.js`
-
-```javascript
-// Update frequency (milliseconds)
-setInterval(async () => {
-    await this.updateLocation(motorbikeId);
-}, 5000); // 5 seconds
-
-// Speed range (km/h)
-const speed = Math.random() * 60; // 0-60 km/h
-
-// Heading change range (degrees)
-const headingChange = (Math.random() - 0.5) * 30; // ±15 degrees
-```
-
-### Geographic Bounds
-```javascript
-// Ho Chi Minh City bounding box
-const minLat = 10.4;
-const maxLat = 11.0;
-const minLng = 106.4;
-const maxLng = 107.0;
-```
-
-## Security Considerations
-
-- All location endpoints require employee authentication
-- Socket.IO connections are validated
-- Location data is stored securely in MongoDB
-- Real-time updates are scoped to specific motorbike rooms
-
-## Performance Considerations
-
-- Location updates are throttled to 5-second intervals
-- Database indexes optimize location queries
-- Socket.IO rooms limit unnecessary broadcasts
-- Location history is limited to prevent memory issues
-
-## Troubleshooting
-
-### Common Issues
-
-1. **GPS simulation not starting**
-   - Check if motorbike status is 'rented'
-   - Verify database connection
-   - Check server logs for errors
-
-2. **Real-time updates not working**
-   - Verify Socket.IO connection
-   - Check if client is in correct room
-   - Ensure server is running on correct port
-
-3. **Location history not loading**
-   - Check database connection
-   - Verify motorbike ID is correct
-   - Check for location data in database
-
-### Debug Commands
-
-```javascript
-// Check active simulations
-console.log(gpsSimulator.activeSimulations);
-
-// Check simulation status
-console.log(simulationStatus);
-
-// Check location data
-const locations = await LocationModel.find({ motorbikeId });
-console.log(locations);
-```
-
-## Future Enhancements
-
-- [ ] Integration with real GPS devices
-- [ ] Route optimization and traffic simulation
-- [ ] Geofencing capabilities
-- [ ] Location analytics and reporting
-- [ ] Mobile app integration
-- [ ] Emergency location alerts 
+1. **Resource Efficiency**: Only tracks and saves location data for active rentals
+2. **Security**: Location data is only accessible for rented motorbikes
+3. **Performance**: Reduced database load when no motorbikes are rented
+4. **Compliance**: Automatic cleanup ensures no location data persists after rentals end
+5. **User Experience**: Clear indication of rented motorbike status and location availability 

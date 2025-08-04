@@ -25,7 +25,7 @@ async function getTopPopularMotorbikeTypes(branchReceiveId) {
         .slice(0, 10)
         .map(([typeId]) => typeId);
     if (topTypeIds.length === 0) return [];
-    // 3. Filter to types available in the given branch
+    // 3. Filter to types available in the given branch with pricing rule
     const availableTypes = await motorbikeTypeModel.aggregate([
         { $match: { _id: { $in: topTypeIds.map(id => new mongoose.Types.ObjectId(id)) }, isActive: true } },
         {
@@ -34,6 +34,14 @@ async function getTopPopularMotorbikeTypes(branchReceiveId) {
                 localField: '_id',
                 foreignField: 'motorbikeType',
                 as: 'motorbikes'
+            }
+        },
+        {
+            $lookup: {
+                from: 'pricingrules',
+                localField: 'pricingRule',
+                foreignField: '_id',
+                as: 'pricingRule'
             }
         },
         {
@@ -51,7 +59,8 @@ async function getTopPopularMotorbikeTypes(branchReceiveId) {
                             }
                         }
                     }
-                }
+                },
+                pricingRule: { $arrayElemAt: ['$pricingRule', 0] }
             }
         },
         { $match: { availableCount: { $gt: 0 } } },

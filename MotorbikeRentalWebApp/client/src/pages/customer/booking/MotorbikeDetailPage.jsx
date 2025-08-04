@@ -4,6 +4,7 @@ import { Layout, Card, Typography, Spin, Empty, Button, Tag, Row, Col, Divider, 
 import { ArrowLeftOutlined, DollarOutlined, SafetyOutlined, ClockCircleOutlined, NumberOutlined, BarcodeOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import HeaderBar from '../../../components/HeaderBar';
+import Footer from '../../../components/Footer';
 
 const { Title, Text, Paragraph } = Typography;
 const { Content } = Layout;
@@ -172,7 +173,7 @@ const MotorbikeDetailPage = () => {
     return (
         <Layout style={{ minHeight: '100vh' }}>
             <HeaderBar />
-            <Content style={{ padding: '24px', backgroundColor: '#f5f5f5' }}>
+            <Content style={{ padding: '24px', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
                 <div style={{ maxWidth: 900, margin: '0 auto' }}>
                     <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
                         Quay lại
@@ -213,6 +214,7 @@ const MotorbikeDetailPage = () => {
                     </Card>
                 </div>
             </Content>
+            <Footer />
         </Layout>
     );
 };

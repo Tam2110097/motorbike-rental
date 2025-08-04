@@ -161,12 +161,12 @@ const PickAddress = ({ onAddressPicked }) => {
                     style={{ height: '100%', width: '100%' }}
                 >
                     <TileLayer
-                        attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    //     attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-                    // url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    // url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-                    // attribution='Tiles &copy; Esri'
+                        // attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
+                        // url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        //     attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
+                        // url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+                        attribution='Tiles &copy; Esri'
                     // url="https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=AP53YlPcyRpMVUGIW48D"
                     // attribution='&copy; <a href="https://www.maptiler.com/">MapTiler</a>'
                     />

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Typography, Spin, Empty, Row, Col, message, Tag, Button, Divider, Space } from 'antd';
+import { Card, Typography, Spin, Empty, Row, Col, message, Tag, Button, Divider, Space, Image } from 'antd';
 import axios from 'axios';
-import { DollarOutlined, SafetyOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { DollarOutlined, SafetyOutlined, ClockCircleOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;
 
-const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
+const RecommendationMotorbikeType = ({ tripContext, branchReceiveId, bookingData }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [recommendations, setRecommendations] = useState([]);
@@ -86,7 +87,14 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                         <Col xs={24} sm={12} lg={8} xl={6} key={type._id} style={{ display: 'flex' }}>
                             <Card
                                 hoverable
-                                style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
+                                    transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+                                }}
                                 cover={
                                     <div style={{
                                         height: 250,
@@ -98,7 +106,7 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                         background: '#fff',
                                         overflow: 'hidden'
                                     }}>
-                                        <img
+                                        <Image
                                             alt={type.name}
                                             src={`http://localhost:8080${type.image}`}
                                             style={{
@@ -110,9 +118,7 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                                 maxWidth: '100%',
                                                 maxHeight: '100%'
                                             }}
-                                            onError={e => {
-                                                e.target.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN'
-                                            }}
+                                            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
                                         />
                                         <Tag color={fallback ? 'gold' : 'purple'} style={{ position: 'absolute', top: 8, right: 8, fontSize: 12, fontWeight: 'bold' }}>
                                             {fallback ? 'Phổ biến' : 'Đề xuất'}
@@ -123,7 +129,12 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                     <Button
                                         type="primary"
                                         disabled={type.availableCount === 0}
-                                        style={{ width: '100%' }}
+                                        style={{
+                                            width: '100%',
+                                            borderRadius: '8px',
+                                            height: '40px',
+                                            fontWeight: '600'
+                                        }}
                                     >
                                         {type.availableCount === 0 ? 'Hết xe' : 'Chọn xe'}
                                     </Button>
@@ -132,7 +143,9 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                 <Card.Meta
                                     title={
                                         <div>
-                                            <Title level={4} style={{ margin: 0, color: '#1890ff' }}>{type.name}</Title>
+                                            <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
+                                                {type.name}
+                                            </Title>
                                             <div style={{ fontSize: 15, color: '#faad14', fontWeight: 500, margin: '4px 0' }}>
                                                 {type.avgSatisfaction ? `${type.avgSatisfaction.toFixed(1)}★` : '-'}
                                                 {type.usedCount ? ` | ${type.usedCount} lượt thuê` : ''}
@@ -150,21 +163,53 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                             >
                                                 {type.description || 'Không có mô tả'}
                                             </Paragraph>
+
                                             <Divider style={{ margin: '12px 0' }} />
+
                                             <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                                {type.pricingRule && (
+                                                {/* Pricing based on same/different branch logic */}
+                                                {bookingData && bookingData.startBranch === bookingData.endBranch && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Text>
+                                                            <DollarOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+                                                            Giá thuê cùng chi nhánh:
+                                                        </Text>
+                                                        <Text style={{ color: '#1890ff' }}>
+                                                            {type.pricingRule?.sameBranchPrice !== undefined
+                                                                ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(type.pricingRule.sameBranchPrice)
+                                                                : 'N/A'}
+                                                        </Text>
+                                                    </div>
+                                                )}
+
+                                                {bookingData && bookingData.startBranch !== bookingData.endBranch && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Text>
+                                                            <DollarOutlined style={{ marginRight: 4, color: '#fa541c' }} />
+                                                            Giá thuê khác chi nhánh:
+                                                        </Text>
+                                                        <Text style={{ color: '#fa541c' }}>
+                                                            {type.pricingRule?.differentBranchPrice !== undefined
+                                                                ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(type.pricingRule.differentBranchPrice)
+                                                                : 'N/A'}
+                                                        </Text>
+                                                    </div>
+                                                )}
+
+                                                {!bookingData && (
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <Text>
                                                             <DollarOutlined style={{ marginRight: 4, color: '#1890ff' }} />
                                                             Giá thuê:
                                                         </Text>
                                                         <Text style={{ color: '#1890ff' }}>
-                                                            {type.pricingRule.sameBranchPrice !== undefined
+                                                            {type.pricingRule?.sameBranchPrice !== undefined
                                                                 ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(type.pricingRule.sameBranchPrice)
                                                                 : 'N/A'}
                                                         </Text>
                                                     </div>
                                                 )}
+
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <Text>
                                                         <SafetyOutlined style={{ marginRight: 4, color: '#faad14' }} />
@@ -176,6 +221,7 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                                             : 'N/A'}
                                                     </Text>
                                                 </div>
+
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <Text>
                                                         <ClockCircleOutlined style={{ marginRight: 4, color: '#722ed1' }} />
@@ -186,6 +232,19 @@ const RecommendationMotorbikeType = ({ tripContext, branchReceiveId }) => {
                                                             ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(type.dailyDamageWaiver)
                                                             : 'N/A'}
                                                     </Text>
+                                                </div>
+
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Link to={`/motorbike-detail/${type._id}`}
+                                                            style={{ color: '#1890ff', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                                                        >
+                                                            <ArrowRightOutlined />
+                                                            <Text>
+                                                                Xem chi tiết
+                                                            </Text>
+                                                        </Link>
+                                                    </div>
                                                 </div>
                                             </Space>
                                         </div>

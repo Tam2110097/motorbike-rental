@@ -3,6 +3,7 @@ import CustomerInformation from './components/CustomerInformation'
 import OrderDetail from './components/OrderDetail'
 import PlaceOrderButton from './components/PlaceOrderButton'
 import HeaderBar from '../../../../components/HeaderBar'
+import Footer from '../../../../components/Footer'
 import { Layout } from 'antd'
 import { useBooking } from '../../../../context/BookingContext';
 import axios from 'axios';
@@ -126,6 +127,7 @@ const CheckoutPage = () => {
                     quantity: item.quantity,
                     unitPrice,
                     damageWaiverFee,
+                    duration: rentalDays,
                     hasDamageWaiver: item.hasDamageWaiver // Include damage waiver status
                 };
             });
@@ -300,6 +302,7 @@ const CheckoutPage = () => {
                     </div>
                 </div>
             </Content>
+            <Footer />
         </Layout>
     )
 }

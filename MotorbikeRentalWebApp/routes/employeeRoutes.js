@@ -45,7 +45,8 @@ const {
     getOrderMotorbikesForMaintenance,
     createMaintenanceForOrder,
     getAllMaintenance,
-    completeMaintenance
+    completeMaintenance,
+    scheduleMaintenance
 } = require('../controllers/employee-controller/maintenanceCtrl');
 
 const {
@@ -57,7 +58,8 @@ const {
     startAllRentedSimulations,
     stopAllSimulations,
     getSimulationStatus,
-    manualUpdateLocation
+    manualUpdateLocation,
+    getAndSaveRentedMotorbikeLocations
 } = require('../controllers/employee-controller/locationCtrl');
 
 // Router object
@@ -150,6 +152,9 @@ router.get('/maintenance/order/:orderId/motorbikes', authMiddleware, authorizeRo
 // Create maintenance records for motorbikes
 router.post('/maintenance/order/:orderId/create', authMiddleware, authorizeRoles('employee'), uploadMiddleware.array('images', 10), createMaintenanceForOrder);
 
+// Schedule maintenance for motorbikes (direct scheduling)
+router.post('/maintenance/schedule', authMiddleware, authorizeRoles('employee'), scheduleMaintenance);
+
 // Get all maintenance records
 router.get('/maintenance/all', authMiddleware, authorizeRoles('employee'), getAllMaintenance);
 
@@ -185,5 +190,8 @@ router.get('/location/simulation/status', authMiddleware, authorizeRoles('employ
 
 // Manual location update from frontend simulation
 router.post('/location/simulation/manual', authMiddleware, authorizeRoles('employee'), manualUpdateLocation);
+
+// Get location data only from rented motorbikes and save to database
+router.get('/location/rented-motorbikes/save', authMiddleware, authorizeRoles('employee'), getAndSaveRentedMotorbikeLocations);
 
 module.exports = router;

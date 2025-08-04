@@ -55,6 +55,7 @@ import RefundPage from './pages/employee/order/RefundPage'
 import RateOrderPage from './pages/customer/order/RateOrderPage'
 import MaintenancePage from './pages/employee/maintenance/MaintenancePage'
 import LocationTrackingPage from './pages/employee/location/LocationTrackingPage'
+import RentalForecast from './pages/admin/rental-forecast/RentalForecast'
 
 function App() {
 
@@ -186,6 +187,12 @@ function App() {
           <Route path='/admin/feedback' element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <FeedBackPage />
+            </ProtectedRoute>
+          } />
+          {/* ====admin-demand-prediction==== */}
+          <Route path='/admin/demand-prediction' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <RentalForecast />
             </ProtectedRoute>
           } />
           {/* ====employee==== */}

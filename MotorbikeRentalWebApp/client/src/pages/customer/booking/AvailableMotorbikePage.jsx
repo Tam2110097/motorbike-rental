@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import HeaderBar from '../../../components/HeaderBar'
+import Footer from '../../../components/Footer'
 import { Layout, Card, Row, Col, Typography, Spin, Empty, Tag, Button, Space, Image, Divider, message } from 'antd'
 import { CarOutlined, DollarOutlined, SafetyOutlined, ClockCircleOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import axios from 'axios'
@@ -122,7 +123,7 @@ const AvailableMotorbikePage = () => {
 
     if (loading) {
         return (
-            <Layout>
+            <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                 <HeaderBar />
                 <Content style={{ padding: '50px', textAlign: 'center' }}>
                     <Spin size="large" />
@@ -130,13 +131,14 @@ const AvailableMotorbikePage = () => {
                         <Text>Đang tải danh sách xe máy...</Text>
                     </div>
                 </Content>
+                <Footer />
             </Layout>
         )
     }
 
     if (error) {
         return (
-            <Layout>
+            <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                 <HeaderBar />
                 <Content style={{ padding: '50px', textAlign: 'center' }}>
                     <Empty
@@ -155,21 +157,28 @@ const AvailableMotorbikePage = () => {
                         }
                     />
                 </Content>
+                <Footer />
             </Layout>
         )
     }
 
     return (
-        <Layout style={{ minHeight: '100vh' }}>
+        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
             <HeaderBar />
-            <Content style={{ padding: '24px', backgroundColor: '#f5f5f5' }}>
+            <Content style={{ padding: '24px' }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                     <div style={{ marginBottom: 24 }}>
                         <Title level={2} style={pageTitleStyle}>
                             Danh sách xe máy khả dụng
                         </Title>
                         {branchName && (
-                            <Text type="secondary" style={{ fontSize: 16 }}>
+                            <Text style={{
+                                fontSize: 18,
+                                color: '#666',
+                                fontWeight: '500',
+                                display: 'block',
+                                marginTop: 8
+                            }}>
                                 Tại {branchName}
                             </Text>
                         )}
@@ -188,29 +197,33 @@ const AvailableMotorbikePage = () => {
                                 <RecommendationMotorbikeType
                                     tripContext={bookingData.tripContext}
                                     branchReceiveId={bookingData.startBranch}
+                                    bookingData={bookingData}
                                 />
                             </div>
                         )}
 
                     {/* Available Motorbikes Section */}
-                    <div style={{ marginBottom: 16 }}>
-                        <Title level={3} style={{ marginBottom: 12, color: '#52c41a' }}>Xe máy có sẵn</Title>
-                    </div>
+                    <Title level={3} style={{ marginBottom: 12, color: '#1890ff' }}>Xe máy có sẵn</Title>
 
                     {motorbikeTypes.length === 0 ? (
-                        <Card>
-                            <Empty
-                                description="Không có xe máy nào khả dụng tại thời điểm này"
-                                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            />
-                        </Card>
+                        <Empty
+                            description="Không có xe máy nào khả dụng tại thời điểm này"
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        />
                     ) : (
                         <Row gutter={[16, 16]} style={{ display: 'flex', flexWrap: 'wrap' }}>
                             {motorbikeTypes.map((motorbikeType) => (
                                 <Col xs={24} sm={12} lg={8} xl={6} key={motorbikeType._id} style={{ display: 'flex' }}>
                                     <Card
                                         hoverable
-                                        style={{ width: '100%', display: 'flex', flexDirection: 'column' }}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
+                                            transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+                                        }}
                                         cover={
                                             <div style={{
                                                 height: 250,
@@ -255,7 +268,12 @@ const AvailableMotorbikePage = () => {
                                                 type="primary"
                                                 onClick={() => handleSelectMotorbikeType(motorbikeType)}
                                                 disabled={motorbikeType.availableCount === 0}
-                                                style={{ width: '100%' }}
+                                                style={{
+                                                    width: '100%',
+                                                    borderRadius: '8px',
+                                                    height: '40px',
+                                                    fontWeight: '600'
+                                                }}
                                             >
                                                 {motorbikeType.availableCount === 0 ? 'Hết xe' : 'Chọn xe'}
                                             </Button>
@@ -357,6 +375,7 @@ const AvailableMotorbikePage = () => {
                     )}
                 </div>
             </Content>
+            <Footer />
         </Layout>
     )
 }

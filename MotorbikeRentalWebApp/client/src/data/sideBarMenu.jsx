@@ -14,7 +14,7 @@ export const employeeMenu = [
     {
         path: "/employee/accessory",
         icon: UserOutlined,
-        label: "Quản lý sản phẩm"
+        label: "Quản lý phụ kiện"
     },
     {
         path: "/employee/motorbike",
@@ -79,5 +79,10 @@ export const adminMenu = [
         path: "/admin/feedback",
         icon: NotificationOutlined,
         label: "Báo cáo từ khách hàng",
+    },
+    {
+        path: "/admin/demand-prediction",
+        icon: NotificationOutlined,
+        label: "Xem dự đoán nhu cầu",
     },
 ]

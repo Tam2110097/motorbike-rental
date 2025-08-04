@@ -79,6 +79,7 @@ const PolicyAgreement = ({ onPolicyChange }) => {
                             <li>Phải báo ngay khi có tai nạn hoặc hư hỏng</li>
                             <li>Đậu xe đúng nơi quy định</li>
                             <li>Thông tin liên hệ khẩn cấp có trong hồ sơ thuê xe</li>
+                            <li><strong>⚠️ CẢNH BÁO:</strong> Không được lái xe ra khỏi biên giới Việt Nam, nếu vi phạm bạn phải chịu hoàn toàn trách nhiệm về mặt pháp lý</li>
                         </ul>
                     </div>
                 </div>

@@ -19,14 +19,31 @@ const HeaderBar = () => {
     };
 
     return (
-        <Header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="logo-container">
-                <img
-                    src="/images/logo.png"
-                    alt="Logo"
-                    style={{ width: '200px', height: 'auto', marginRight: '16px', marginTop: '16px' }}
-                />
-            </div>
+        <Header style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: '80px',
+            padding: '0 24px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+            <Link to="/" style={{ textDecoration: 'none' }}>
+                <div className="logo-container" style={{ cursor: 'pointer' }}>
+                    <img
+                        src="/images/logo.png"
+                        alt="Logo"
+                        style={{
+                            width: '280px',
+                            height: 'auto',
+                            maxHeight: '175px',
+                            objectFit: 'contain',
+                            transition: 'transform 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                        onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                    />
+                </div>
+            </Link>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 {user ? (
                     <>
@@ -62,12 +79,12 @@ const HeaderBar = () => {
                                 }}
                             >
                                 <ShoppingOutlined style={{ fontSize: '16px' }} />
-                                My Orders
+                                Đơn hàng của tôi
                             </Link>
                         )}
 
                         <span style={{ color: 'white', fontSize: '16px' }}>
-                            Welcome, {user.fullName} ({user.role?.name || 'Unknown'})
+                            Chào mừng, {user.fullName} ({user.role?.name === 'customer' ? 'Khách hàng' : user.role?.name === 'admin' ? 'Quản trị viên' : user.role?.name === 'employee' ? 'Nhân viên' : 'Không xác định'})
                         </span>
 
                         <Button

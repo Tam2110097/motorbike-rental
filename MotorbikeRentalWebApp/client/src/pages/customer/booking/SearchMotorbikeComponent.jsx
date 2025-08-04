@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useBooking } from '../../../context/BookingContext'
 import dayjs from 'dayjs'
 import RecommendationMotorbikeType from '../../../components/RecommendationMotorbikeType';
+import PricingTable from '../../../components/PricingTable';
 
 const containerStyle = {
     width: '1000px',
@@ -96,21 +97,7 @@ const searchButtonStyle = {
     transition: 'all 0.3s ease',
 };
 
-const pageTitleStyle = {
-    textAlign: 'center',
-    margin: '80px auto 30px auto',
-    color: 'white',
-    fontSize: '28px',
-    fontWeight: '700',
-    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    padding: '15px 25px',
-    borderRadius: '12px',
-    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
-    maxWidth: '600px',
-    position: 'relative',
-    zIndex: 10,
-};
+
 
 const sectionContainerStyle = {
     backgroundColor: '#fafafa',
@@ -139,9 +126,23 @@ const SearchMotorbikeComponent = () => {
     const [preferredFeatures, setPreferredFeatures] = useState([]);
 
     const [minEndDate, setMinEndDate] = useState(null);
+    const [activeTab, setActiveTab] = useState('search');
 
 
     const navigate = useNavigate();
+
+    // Handler functions for pricing table
+    const handleBookClick = (motorbikeType) => {
+        // Navigate to booking page with selected motorbike type
+        navigate('/booking/available-motorbikes', {
+            state: { selectedMotorbikeType: motorbikeType }
+        });
+    };
+
+    const handleViewClick = (motorbikeType) => {
+        // Navigate to motorbike detail page
+        navigate(`/motorbike-detail/${motorbikeType._id}`);
+    };
 
     const getAllBranches = async () => {
         try {
@@ -352,218 +353,243 @@ const SearchMotorbikeComponent = () => {
     ];
 
     return (
-        <div style={{ paddingTop: '500px' }}>
-            <h1 style={pageTitleStyle}>🏍️ Tìm kiếm xe máy</h1>
+        <div>
+            <h1 style={{
+                textAlign: 'center',
+                margin: '0 auto 40px auto',
+                color: '#333',
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                maxWidth: '600px'
+            }}>🏍️ Tìm kiếm xe máy</h1>
             <div style={containerStyle}>
                 <Tabs
-                    defaultActiveKey="search"
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
                     items={[
                         {
                             key: "search",
-                            label: <Link to="#" style={{ textDecoration: 'none', color: 'black', fontWeight: '600' }}>Tìm kiếm</Link>,
+                            label: <span style={{ textDecoration: 'none', color: 'black', fontWeight: '600' }}>Tìm kiếm</span>,
                         },
                         {
                             key: "pricing",
-                            label: <Link to="#" style={{ textDecoration: 'none', color: 'black', fontWeight: '600' }}>Bảng giá</Link>,
+                            label: <span style={{ textDecoration: 'none', color: 'black', fontWeight: '600' }}>Bảng giá</span>,
                         },
                     ]}
                 />
 
-                {/* Bắt đầu */}
-                <div style={sectionContainerStyle}>
-                    <div style={sectionTitleStyle}>📍 Bắt đầu</div>
-                    <div style={rowStyle}>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Thành phố bắt đầu</label>
-                            <Select
-                                value={startBranch}
-                                placeholder="Chọn thành phố"
-                                style={selectStyle}
-                                onChange={(value) => setStartBranch(value)}
-                                options={startBranchOptions}
-                            />
-                        </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Ngày bắt đầu</label>
-                            {/* <DatePicker style={datePickerStyle} onChange={(value) => setStartDate(value)} /> */}
-                            <DatePicker
-                                style={datePickerStyle}
-                                onChange={(value) => setStartDate(value)}
-                                disabledDate={(current) =>
-                                    current && current < dayjs().add(1, 'day').startOf('day')
-                                }
-                            />
+                {activeTab === 'search' && (
+                    <>
+                        {/* Bắt đầu */}
+                        <div style={sectionContainerStyle}>
+                            <div style={sectionTitleStyle}>📍 Bắt đầu</div>
+                            <div style={rowStyle}>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Thành phố bắt đầu</label>
+                                    <Select
+                                        value={startBranch}
+                                        placeholder="Chọn thành phố"
+                                        style={selectStyle}
+                                        onChange={(value) => setStartBranch(value)}
+                                        options={startBranchOptions}
+                                    />
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Ngày bắt đầu</label>
+                                    {/* <DatePicker style={datePickerStyle} onChange={(value) => setStartDate(value)} /> */}
+                                    <DatePicker
+                                        style={datePickerStyle}
+                                        onChange={(value) => setStartDate(value)}
+                                        disabledDate={(current) =>
+                                            current && current < dayjs().add(1, 'day').startOf('day')
+                                        }
+                                    />
 
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Thời gian bắt đầu</label>
+                                    <Select
+                                        value={startTime}
+                                        placeholder="Chọn thời gian"
+                                        style={selectStyle}
+                                        onChange={(value) => setStartTime(value)}
+                                        options={startTimeOptions}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Thời gian bắt đầu</label>
-                            <Select
-                                value={startTime}
-                                placeholder="Chọn thời gian"
-                                style={selectStyle}
-                                onChange={(value) => setStartTime(value)}
-                                options={startTimeOptions}
-                            />
-                        </div>
-                    </div>
-                </div>
 
-                {/* Thông tin chuyến đi */}
-                <div style={sectionContainerStyle}>
-                    <div style={sectionTitleStyle}>🎯 Kết thúc</div>
-                    <div style={rowStyle}>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Thành phố kết thúc</label>
-                            <Select
-                                value={endBranch}
-                                placeholder="Chọn thành phố"
-                                style={selectStyle}
-                                onChange={(value) => setEndBranch(value)}
-                                options={endBranchOptions}
-                            />
-                        </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Ngày kết thúc</label>
-                            {/* <DatePicker style={datePickerStyle} onChange={(value) => setEndDate(value)} /> */}
-                            <DatePicker
-                                style={datePickerStyle}
-                                onChange={(value) => setEndDate(value)}
-                                disabledDate={(current) => {
-                                    if (!startDate || !startBranch || !endBranch) return true;
+                        {/* Thông tin chuyến đi */}
+                        <div style={sectionContainerStyle}>
+                            <div style={sectionTitleStyle}>🎯 Kết thúc</div>
+                            <div style={rowStyle}>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Thành phố kết thúc</label>
+                                    <Select
+                                        value={endBranch}
+                                        placeholder="Chọn thành phố"
+                                        style={selectStyle}
+                                        onChange={(value) => setEndBranch(value)}
+                                        options={endBranchOptions}
+                                    />
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Ngày kết thúc</label>
+                                    {/* <DatePicker style={datePickerStyle} onChange={(value) => setEndDate(value)} /> */}
+                                    <DatePicker
+                                        style={datePickerStyle}
+                                        onChange={(value) => setEndDate(value)}
+                                        disabledDate={(current) => {
+                                            if (!startDate || !startBranch || !endBranch) return true;
 
-                                    const fromCity = branchOptions.find(b => b._id === startBranch)?.city;
-                                    const toCity = branchOptions.find(b => b._id === endBranch)?.city;
+                                            const fromCity = branchOptions.find(b => b._id === startBranch)?.city;
+                                            const toCity = branchOptions.find(b => b._id === endBranch)?.city;
 
-                                    if (!fromCity || !toCity) return true;
+                                            if (!fromCity || !toCity) return true;
 
-                                    const isSameCity = fromCity === toCity;
+                                            const isSameCity = fromCity === toCity;
 
-                                    if (isSameCity) {
-                                        // Cho phép chọn cùng ngày nếu cùng chi nhánh
-                                        return current && current < startDate.startOf('day');
-                                    } else {
-                                        // Khác chi nhánh → phải >= minEndDate (ví dụ startDate + 2 ngày)
-                                        return current && current < minEndDate?.startOf('day');
-                                    }
-                                }}
+                                            if (isSameCity) {
+                                                // Cho phép chọn cùng ngày nếu cùng chi nhánh
+                                                return current && current < startDate.startOf('day');
+                                            } else {
+                                                // Khác chi nhánh → phải >= minEndDate (ví dụ startDate + 2 ngày)
+                                                return current && current < minEndDate?.startOf('day');
+                                            }
+                                        }}
 
 
-                            />
+                                    />
 
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Thời gian kết thúc</label>
+                                    <Select
+                                        value={endTime}
+                                        placeholder="Chọn thời gian"
+                                        style={selectStyle}
+                                        onChange={(value) => setEndTime(value)}
+                                        options={getValidEndTimeOptions()}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Thời gian kết thúc</label>
-                            <Select
-                                value={endTime}
-                                placeholder="Chọn thời gian"
-                                style={selectStyle}
-                                onChange={(value) => setEndTime(value)}
-                                options={getValidEndTimeOptions()}
-                            />
-                        </div>
-                    </div>
-                </div>
 
-                {/* Thông tin chi tiết chuyến đi */}
-                <div style={sectionContainerStyle}>
-                    <div style={sectionTitleStyle}>⚙️ Thông tin chi tiết chuyến đi</div>
-                    <div style={rowStyle}>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Mục đích chuyến đi</label>
-                            <Select
-                                value={purpose}
-                                placeholder="Chọn mục đích"
-                                style={selectStyle}
-                                onChange={(value) => setPurpose(value)}
-                                options={purposeOptions}
-                            />
+                        {/* Thông tin chi tiết chuyến đi */}
+                        <div style={sectionContainerStyle}>
+                            <div style={sectionTitleStyle}>⚙️ Thông tin chi tiết chuyến đi</div>
+                            <div style={rowStyle}>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Mục đích chuyến đi</label>
+                                    <Select
+                                        value={purpose}
+                                        placeholder="Chọn mục đích"
+                                        style={selectStyle}
+                                        onChange={(value) => setPurpose(value)}
+                                        options={purposeOptions}
+                                    />
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Khoảng cách</label>
+                                    <Select
+                                        value={distanceCategory}
+                                        placeholder="Chọn khoảng cách"
+                                        style={selectStyle}
+                                        onChange={(value) => setDistanceCategory(value)}
+                                        options={distanceCategoryOptions}
+                                    />
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Số người</label>
+                                    <Select
+                                        value={numPeople}
+                                        placeholder="Chọn số người"
+                                        style={selectStyle}
+                                        onChange={(value) => setNumPeople(value)}
+                                        options={numPeopleOptions}
+                                    />
+                                </div>
+                            </div>
+                            <div style={rowStyle}>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Địa hình</label>
+                                    <Select
+                                        value={terrain}
+                                        placeholder="Chọn địa hình"
+                                        style={selectStyle}
+                                        onChange={(value) => setTerrain(value)}
+                                        options={terrainOptions}
+                                    />
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Hành lý</label>
+                                    <Select
+                                        value={luggage}
+                                        placeholder="Chọn loại hành lý"
+                                        style={selectStyle}
+                                        onChange={(value) => setLuggage(value)}
+                                        options={luggageOptions}
+                                    />
+                                </div>
+                                <div style={inputGroupStyle}>
+                                    <label style={labelStyle}>Tính năng ưa thích</label>
+                                    <Select
+                                        mode="multiple"
+                                        value={preferredFeatures}
+                                        placeholder="Chọn tính năng"
+                                        style={selectStyle}
+                                        onChange={(value) => setPreferredFeatures(value)}
+                                        options={preferredFeaturesOptions}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Khoảng cách</label>
-                            <Select
-                                value={distanceCategory}
-                                placeholder="Chọn khoảng cách"
-                                style={selectStyle}
-                                onChange={(value) => setDistanceCategory(value)}
-                                options={distanceCategoryOptions}
-                            />
-                        </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Số người</label>
-                            <Select
-                                value={numPeople}
-                                placeholder="Chọn số người"
-                                style={selectStyle}
-                                onChange={(value) => setNumPeople(value)}
-                                options={numPeopleOptions}
-                            />
-                        </div>
-                    </div>
-                    <div style={rowStyle}>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Địa hình</label>
-                            <Select
-                                value={terrain}
-                                placeholder="Chọn địa hình"
-                                style={selectStyle}
-                                onChange={(value) => setTerrain(value)}
-                                options={terrainOptions}
-                            />
-                        </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Hành lý</label>
-                            <Select
-                                value={luggage}
-                                placeholder="Chọn loại hành lý"
-                                style={selectStyle}
-                                onChange={(value) => setLuggage(value)}
-                                options={luggageOptions}
-                            />
-                        </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Tính năng ưa thích</label>
-                            <Select
-                                mode="multiple"
-                                value={preferredFeatures}
-                                placeholder="Chọn tính năng"
-                                style={selectStyle}
-                                onChange={(value) => setPreferredFeatures(value)}
-                                options={preferredFeaturesOptions}
-                            />
-                        </div>
-                    </div>
-                </div>
 
-                {/* Gợi ý loại xe phù hợp */}
-                {/* {(purpose && distanceCategory && numPeople && terrain && luggage && preferredFeatures.length > 0 && startBranch) && (
+                        {/* Gợi ý loại xe phù hợp */}
+                        {/* {(purpose && distanceCategory && numPeople && terrain && luggage && preferredFeatures.length > 0 && startBranch) && (
                     <RecommendationMotorbikeType
                         tripContext={{ purpose, distanceCategory, numPeople, terrain, luggage, preferredFeatures }}
                         branchReceiveId={startBranch}
                     />
                 )} */}
 
-                {/* Nút tìm kiếm */}
-                <div style={buttonContainerStyle}>
-                    <p style={descriptionStyle}>
-                        🔍 Vui lòng chọn địa điểm, thời gian và thông tin chuyến đi để tìm kiếm các xe phù hợp với nhu cầu của bạn.
-                    </p>
-                    <Button
-                        type="primary"
-                        size="large"
-                        onClick={handleSearch}
-                        style={searchButtonStyle}
-                        onMouseEnter={(e) => {
-                            e.target.style.transform = 'translateY(-2px)';
-                            e.target.style.boxShadow = '0 6px 20px rgba(24, 144, 255, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.transform = 'translateY(0)';
-                            e.target.style.boxShadow = '0 4px 15px rgba(24, 144, 255, 0.3)';
-                        }}
-                    >
-                        🚀 Tìm xe ngay
-                    </Button>
-                </div>
+                        {/* Nút tìm kiếm */}
+                        <div style={buttonContainerStyle}>
+                            <p style={descriptionStyle}>
+                                🔍 Vui lòng chọn địa điểm, thời gian và thông tin chuyến đi để tìm kiếm các xe phù hợp với nhu cầu của bạn.
+                            </p>
+                            <Button
+                                type="primary"
+                                size="large"
+                                onClick={handleSearch}
+                                style={searchButtonStyle}
+                                onMouseEnter={(e) => {
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 6px 20px rgba(24, 144, 255, 0.4)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = '0 4px 15px rgba(24, 144, 255, 0.3)';
+                                }}
+                            >
+                                🚀 Tìm xe ngay
+                            </Button>
+                        </div>
+                    </>
+                )}
+
+                {activeTab === 'pricing' && (
+                    <div style={{ marginTop: '20px' }}>
+                        <PricingTable
+                            title="Bảng Giá Thuê Xe"
+                            showBookButton={true}
+                            showViewButton={true}
+                            onBookClick={handleBookClick}
+                            onViewClick={handleViewClick}
+                            showFilters={true}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );
