@@ -32,7 +32,7 @@ const CreateSpecificationPage = () => {
 
     const onFinishHandler = async (values) => {
         try {
-            const res = await axios.post('http://localhost:8080/api/v1/admin/specifications/create', values);
+            const res = await axios.post('http://localhost:8080/api/v1/admin/spec/create', values);
             if (res.data.success) {
                 message.success('Thêm thông số kỹ thuật thành công');
                 navigate('/admin/specification');

@@ -112,17 +112,20 @@ const HeaderBar = () => {
                                 e.target.style.transform = 'translateY(0)';
                             }}
                         >
-                            Logout
+                            {/* Logout */}
+                            Đăng xuất
                         </Button>
                     </>
                 ) : (
                     <>
                         <Link to="/login" style={{ fontSize: '18px', fontWeight: '500', color: 'white', textDecoration: 'none' }}>
-                            Login
+                            {/* Login */}
+                            Đăng nhập
                         </Link>
                         <div style={{ color: "white" }}>/</div>
                         <Link to="/register" style={{ fontSize: '18px', fontWeight: '500', color: 'white', textDecoration: 'none' }}>
-                            Register
+                            {/* Register */}
+                            Đăng ký
                         </Link>
                     </>
                 )}

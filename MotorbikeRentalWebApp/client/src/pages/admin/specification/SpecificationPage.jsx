@@ -10,7 +10,7 @@ const SpecificationPage = () => {
 
     const getAllSpecs = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/v1/admin/specifications/get-all',
+            const res = await axios.get('http://localhost:8080/api/v1/admin/spec/get-all',
                 {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`

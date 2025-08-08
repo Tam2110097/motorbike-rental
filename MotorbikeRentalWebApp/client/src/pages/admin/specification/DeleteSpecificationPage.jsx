@@ -14,7 +14,7 @@ const DeleteSpecificationPage = () => {
     useEffect(() => {
         const fetchSpec = async () => {
             try {
-                const res = await axios.get(`http://localhost:8080/api/v1/admin/specifications/get-by-id/${id}`,
+                const res = await axios.get(`http://localhost:8080/api/v1/admin/spec/get-by-id/${id}`,
                     {
                         headers: {
                             Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -35,7 +35,7 @@ const DeleteSpecificationPage = () => {
 
     const handleDelete = async () => {
         try {
-            const res = await axios.delete(`http://localhost:8080/api/v1/admin/specifications/delete/${id}`,
+            const res = await axios.delete(`http://localhost:8080/api/v1/admin/spec/delete/${id}`,
                 {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`

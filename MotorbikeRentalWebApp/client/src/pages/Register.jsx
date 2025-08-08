@@ -16,7 +16,7 @@ const Register = () => {
             const res = await axios.post('http://localhost:8080/api/v1/user/register', values)
             dispatch(hideLoading())
             if (res.data.success) {
-                message.success('Register SuccessFully!')
+                message.success('Đăng ký thành công!')
                 navigate('/login')
             }
             else {
@@ -25,28 +25,28 @@ const Register = () => {
         } catch (error) {
             dispatch(hideLoading())
             console.log(error);
-            message.error('Something Went Wrong')
+            message.error('Đã xảy ra lỗi')
         }
     }
 
     return (
         <div className="form-container">
             <Form layout='vertical' onFinish={onFinishHandler} className="register-form">
-                <h3 className='text-center'>Register Form</h3>
-                <Form.Item label='Full Name' name="fullName">
-                    <Input type='text' required />
+                <h3 className='text-center'>Đăng Ký</h3>
+                <Form.Item label='Họ và tên' name="fullName">
+                    <Input type='text' required placeholder="Nhập họ và tên của bạn" />
                 </Form.Item>
                 <Form.Item label='Email' name="email">
-                    <Input type='email' required />
+                    <Input type='email' required placeholder="Nhập email của bạn" />
                 </Form.Item>
-                <Form.Item label='Phone' name="phone">
-                    <Input type='text' required />
+                <Form.Item label='Số điện thoại' name="phone">
+                    <Input type='text' required placeholder="Nhập số điện thoại của bạn" />
                 </Form.Item>
-                <Form.Item label='Password' name="password">
-                    <Input type='password' required />
+                <Form.Item label='Mật khẩu' name="password">
+                    <Input type='password' required placeholder="Nhập mật khẩu của bạn" />
                 </Form.Item>
-                <Link to="/login" className='m-2'>Already user login here</Link>
-                <Button type='primary' htmlType="submit">Register</Button>
+                <Link to="/login" className='m-2'>Đã có tài khoản? Đăng nhập tại đây</Link>
+                <Button type='primary' htmlType="submit">Đăng Ký</Button>
             </Form>
         </div>
     )

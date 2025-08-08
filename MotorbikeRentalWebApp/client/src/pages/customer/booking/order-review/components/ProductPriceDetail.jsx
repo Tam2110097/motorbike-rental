@@ -164,6 +164,7 @@ const ProductPriceDetail = () => {
                                         icon={<DeleteOutlined />}
                                         onClick={() => handleRemoveMotorbike(motorbikeType._id)}
                                         size="small"
+                                        disabled={motorbikes.length <= 1}
                                     >
                                         Xóa
                                     </Button>

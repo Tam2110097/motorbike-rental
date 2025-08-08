@@ -8,8 +8,6 @@ import 'leaflet/dist/leaflet.css';
 import { useRef } from 'react';
 import AdminLayout from '../../../components/AdminLayout';
 
-// Sửa lỗi không hiển thị icon marker mặc định của Leaflet khi dùng với Vite/React
-// (dùng link trực tiếp từ unpkg giống PickAddress.jsx)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
@@ -160,7 +158,7 @@ const LocationTrackingPage = () => {
                         const [lat, lng] = currentPos;
 
                         // Di chuyển ngẫu nhiên (giống như REALTIME_TRACKER)
-                        const movementDistance = 0.00005 + Math.random() * 0.00005; // 5-10 meters
+                        const movementDistance = 0.00009 + Math.random() * 0.00009; // 5-10 meters
                         const angle = Math.random() * 2 * Math.PI; // Random direction
 
                         const newLat = lat + Math.cos(angle) * movementDistance;

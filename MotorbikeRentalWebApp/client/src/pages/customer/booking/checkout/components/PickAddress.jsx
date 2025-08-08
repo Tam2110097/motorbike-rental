@@ -32,12 +32,12 @@ const LocationMarker = ({ onLocationChange, initialPosition }) => {
         },
     });
 
-    // Update position when initialPosition changes
+    // Only update position from initialPosition if position is not set yet
     useEffect(() => {
-        if (initialPosition) {
+        if (initialPosition && !position) {
             setPosition(initialPosition);
         }
-    }, [initialPosition]);
+    }, [initialPosition, position]);
 
     return position ? <Marker position={position} /> : null;
 };

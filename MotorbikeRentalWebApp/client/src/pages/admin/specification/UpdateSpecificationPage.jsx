@@ -23,7 +23,7 @@ const UpdateSpecificationPage = () => {
                             }
                         }
                     ),
-                    axios.get(`http://localhost:8080/api/v1/admin/specifications/get-by-id/${id}`,
+                    axios.get(`http://localhost:8080/api/v1/admin/spec/get-by-id/${id}`,
                         {
                             headers: {
                                 Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -67,7 +67,7 @@ const UpdateSpecificationPage = () => {
 
     const onFinishHandler = async (values) => {
         try {
-            const res = await axios.put(`http://localhost:8080/api/v1/admin/specifications/update/${id}`, values,
+            const res = await axios.put(`http://localhost:8080/api/v1/admin/spec/update/${id}`, values,
                 {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`

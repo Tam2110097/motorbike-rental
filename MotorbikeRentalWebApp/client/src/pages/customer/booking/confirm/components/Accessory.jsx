@@ -88,24 +88,24 @@ const Accessory = () => {
 
     const columns = [
         {
-            title: 'Action',
+            title: 'Hành động',
             dataIndex: 'action',
             key: 'action',
             align: 'center',
             render: (_, record) => (
                 selected[record._id] ? (
                     <Button danger onClick={() => handleRemove(record._id)}>
-                        Remove
+                        Xóa
                     </Button>
                 ) : (
                     <Button type="primary" onClick={() => handleAdd(record._id)}>
-                        Add
+                        Thêm
                     </Button>
                 )
             )
         },
         {
-            title: 'Item',
+            title: 'Phụ kiện',
             dataIndex: 'item',
             key: 'item',
             render: (_, record) => (
@@ -130,7 +130,7 @@ const Accessory = () => {
             )
         },
         {
-            title: 'Quantity',
+            title: 'Số lượng',
             dataIndex: 'quantity',
             key: 'quantity',
             align: 'center',

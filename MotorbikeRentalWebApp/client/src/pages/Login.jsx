@@ -19,7 +19,7 @@ const Login = () => {
             if (res.data.success) {
                 localStorage.setItem("token", res.data.token)
                 localStorage.setItem("user", JSON.stringify(res.data.user))
-                message.success('Login Successfully')
+                message.success('Đăng nhập thành công')
                 // Get redirect path from query string
                 // const params = new URLSearchParams(location.search);
                 const role = res.data.user.role.name;
@@ -42,21 +42,21 @@ const Login = () => {
         } catch (error) {
             dispatch(hideLoading())
             console.log(error)
-            message.error('Something Went Wrong')
+            message.error('Đã xảy ra lỗi')
         }
     }
     return (
         <div className="form-container">
             <Form layout='vertical' onFinish={onFinishHandler} className="register-form">
-                <h3 className='text-center'>Login Form</h3>
+                <h3 className='text-center'>Đăng Nhập</h3>
                 <Form.Item label='Email' name="email">
-                    <Input type='email' required />
+                    <Input type='email' required placeholder="Nhập email của bạn" />
                 </Form.Item>
-                <Form.Item label='Password' name="password">
-                    <Input type='password' required />
+                <Form.Item label='Mật khẩu' name="password">
+                    <Input type='password' required placeholder="Nhập mật khẩu của bạn" />
                 </Form.Item>
-                <Link to="/register" className='m-2'>Not a user register here</Link>
-                <Button type='primary' htmlType="submit">Login</Button>
+                <Link to="/register" className='m-2'>Chưa có tài khoản? Đăng ký tại đây</Link>
+                <Button type='primary' htmlType="submit">Đăng Nhập</Button>
             </Form>
         </div>
     )
