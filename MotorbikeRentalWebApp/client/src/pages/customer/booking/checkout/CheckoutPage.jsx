@@ -63,6 +63,22 @@ const CheckoutPage = () => {
 
     // Prepare data for API
     const handlePlaceOrder = async () => {
+        // Yêu cầu đăng nhập trước khi đặt xe
+        if (!isLoggedIn) {
+            try {
+                if (bookingData) {
+                    localStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+                }
+                // Lưu đường dẫn hiện tại để quay lại sau khi đăng nhập
+                const redirectPath = window.location.pathname + window.location.search;
+                localStorage.setItem('redirectPath', redirectPath);
+            } catch {
+                // ignore JSON/stringify errors
+            }
+            message.info('Vui lòng đăng nhập để tiếp tục đặt xe');
+            navigate('/login');
+            return;
+        }
         setLoading(true);
         try {
             if (!bookingData.startDate || !bookingData.endDate || !bookingData.startTime || !bookingData.endTime) {
@@ -297,7 +313,7 @@ const CheckoutPage = () => {
                             paddingTop: 24,
                             borderTop: '2px solid #f0f0f0'
                         }}>
-                            <PlaceOrderButton onClick={handlePlaceOrder} disabled={loading || !isLoggedIn} />
+                            <PlaceOrderButton onClick={handlePlaceOrder} disabled={loading} />
                         </div>
                     </div>
                 </div>

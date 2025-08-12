@@ -195,7 +195,7 @@ const UpdateAccessoryPage = () => {
                     layout="vertical"
                     onFinish={onFinishHandler}
                 >
-                    <h3 className="text-center">Cập nhật sản phẩm</h3>
+                    <h3 className="text-center">Cập nhật phụ kiện</h3>
 
                     <Form.Item
                         label="Tên sản phẩm"
@@ -243,7 +243,7 @@ const UpdateAccessoryPage = () => {
                     // loading={loading}
                     // disabled={loading}
                     >
-                        Cập nhật sản phẩm
+                        Cập nhật phụ kiện
                     </Button>
                 </Form>
             </div>

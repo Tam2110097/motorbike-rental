@@ -190,7 +190,7 @@ const RefundPage = () => {
             )
         },
         {
-            title: 'Ảnh chuyển khoản',
+            title: 'Ảnh minh chứng hoàn tiền',
             dataIndex: 'invoiceImage',
             key: 'invoiceImage',
             render: (img) => {
@@ -223,7 +223,7 @@ const RefundPage = () => {
                     className="refund-action-button"
                     onClick={() => { setSelectedRefund(record); setModalVisible(true); }}
                 >
-                    Cập nhật chuyển khoản
+                    Cập nhật hoàn tiền
                 </Button>
             ) : record.invoiceImage ? (
                 <Button
@@ -368,7 +368,7 @@ const RefundPage = () => {
                             color: '#1890ff',
                             textAlign: 'center'
                         }}>
-                            📤 Cập nhật chuyển khoản hoàn tiền
+                            📤 Cập nhật hoàn tiền
                         </div>
                     }
                     visible={modalVisible}
@@ -417,7 +417,7 @@ const RefundPage = () => {
                                     <UploadOutlined style={{ fontSize: '32px' }} />
                                 </p>
                                 <p className="ant-upload-text" style={{ color: '#1890ff', fontWeight: '500' }}>
-                                    📷 Kéo & thả hoặc bấm để chọn ảnh chuyển khoản
+                                    📷 Kéo & thả hoặc bấm để chọn ảnh hoàn tiền
                                 </p>
                             </Upload.Dragger>
 

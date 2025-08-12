@@ -54,7 +54,9 @@ const UpdateMotorbikeTypePage = () => {
                     description: data.description,
                     image: data.image,
                 });
-                setInitialImage(data.image);
+                // Thêm domain vào đường dẫn hình ảnh nếu chưa có
+                const imageUrl = data.image.startsWith('http') ? data.image : `http://localhost:8080${data.image}`;
+                setInitialImage(imageUrl);
             }
         } catch {
             message.error("Không thể tải thông tin loại xe");
@@ -69,13 +71,18 @@ const UpdateMotorbikeTypePage = () => {
 
     const onFinishHandler = async (values) => {
         try {
-            let imageUrl = values.image;
+            let imageUrl = initialImage; // Sử dụng hình ảnh hiện tại làm mặc định
             if (selectedFile) {
                 const formData = new FormData();
                 formData.append("file", selectedFile);
                 const uploadRes = await axios.post(
                     "http://localhost:8080/api/v1/upload",
-                    formData
+                    formData,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem('token')}`
+                        }
+                    }
                 );
                 if (!uploadRes.data.success) {
                     message.error("Tải ảnh lên thất bại!");
@@ -96,6 +103,11 @@ const UpdateMotorbikeTypePage = () => {
                     preDeposit: Number(values.preDeposit),
                     dailyDamageWaiver: Number(values.dailyDamageWaiver),
                     pricingRule: values.pricingRule,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
                 }
             );
             if (res.data.success) {
@@ -236,12 +248,13 @@ const UpdateMotorbikeTypePage = () => {
                         label="Hình ảnh"
                         name="image"
                         rules={[{ required: true, message: "Vui lòng tải ảnh lên" }]}
+                        extra="Hình ảnh hiện tại sẽ được giữ lại nếu không chọn hình ảnh mới"
                     >
                         <UploadImage
-                            initialImage={initialImage}
+                            initImage={initialImage}
                             onFileSelect={(file) => {
                                 setSelectedFile(file);
-                                form.setFieldsValue({ image: file.name });
+                                // Không cần set form value vì chúng ta sẽ sử dụng initialImage nếu không có file mới
                             }}
                         />
                     </Form.Item>

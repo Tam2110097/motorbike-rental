@@ -42,18 +42,35 @@ const Login = () => {
         } catch (error) {
             dispatch(hideLoading())
             console.log(error)
-            message.error('Đã xảy ra lỗi')
+            if (error.response?.data?.message) {
+                message.error(error.response.data.message)
+            } else {
+                message.error('Đã xảy ra lỗi khi đăng nhập')
+            }
         }
     }
     return (
         <div className="form-container">
             <Form layout='vertical' onFinish={onFinishHandler} className="register-form">
                 <h3 className='text-center'>Đăng Nhập</h3>
-                <Form.Item label='Email' name="email">
-                    <Input type='email' required placeholder="Nhập email của bạn" />
+                <Form.Item
+                    label='Email'
+                    name="email"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập email!' },
+                        { type: 'email', message: 'Email không đúng định dạng!' }
+                    ]}
+                >
+                    <Input type='email' placeholder="Nhập email của bạn" />
                 </Form.Item>
-                <Form.Item label='Mật khẩu' name="password">
-                    <Input type='password' required placeholder="Nhập mật khẩu của bạn" />
+                <Form.Item
+                    label='Mật khẩu'
+                    name="password"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập mật khẩu!' }
+                    ]}
+                >
+                    <Input type='password' placeholder="Nhập mật khẩu của bạn" />
                 </Form.Item>
                 <Link to="/register" className='m-2'>Chưa có tài khoản? Đăng ký tại đây</Link>
                 <Button type='primary' htmlType="submit">Đăng Nhập</Button>

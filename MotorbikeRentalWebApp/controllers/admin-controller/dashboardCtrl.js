@@ -443,27 +443,33 @@ const getSalesByVehicleTypeAndBranch = async (req, res) => {
             };
         }
 
+        // Tính doanh thu dựa trên bảng chi tiết motorbike (rentalOrderMotorbikeDetails)
+        // Revenue = (unitPrice + damageWaiverFee) * quantity * duration
+        // DamageWaiver = damageWaiverFee * quantity * duration
         const salesByTypeAndBranch = await rentalOrderModel.aggregate([
-            {
-                $match: {
-                    status: 'completed',
-                    ...dateFilter
-                }
-            },
-            {
-                $unwind: '$motorbikes'
-            },
+            { $match: { status: 'completed', ...dateFilter } },
+            // Lấy chi tiết theo order
             {
                 $lookup: {
-                    from: 'motorbiketypes',
-                    localField: 'motorbikes.motorbikeTypeId',
-                    foreignField: '_id',
-                    as: 'motorbikeType'
+                    from: 'rentalordermotorbikedetails',
+                    let: { orderId: '$_id' },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ['$rentalOrderId', '$$orderId'] } } },
+                        {
+                            $lookup: {
+                                from: 'motorbiketypes',
+                                localField: 'motorbikeTypeId',
+                                foreignField: '_id',
+                                as: 'motorbikeType'
+                            }
+                        },
+                        { $unwind: '$motorbikeType' }
+                    ],
+                    as: 'details'
                 }
             },
-            {
-                $unwind: '$motorbikeType'
-            },
+            { $unwind: '$details' },
+            // Lấy chi nhánh nhận xe
             {
                 $lookup: {
                     from: 'branches',
@@ -472,49 +478,45 @@ const getSalesByVehicleTypeAndBranch = async (req, res) => {
                     as: 'branchReceive'
                 }
             },
-            {
-                $unwind: '$branchReceive'
-            },
+            { $unwind: '$branchReceive' },
+            // Tính revenue và damage waiver từ details
             {
                 $addFields: {
-                    // Calculate revenue for this motorbike: (pricePerDay * quantity) + damage waiver if applicable
-                    motorbikeRevenue: {
-                        $add: [
-                            { $multiply: ['$motorbikes.pricePerDay', '$motorbikes.quantity'] },
-                            {
-                                $cond: {
-                                    if: '$motorbikes.hasDamageWaiver',
-                                    then: { $multiply: ['$motorbikes.pricePerDay', '$motorbikes.quantity', 0.1] }, // 10% damage waiver
-                                    else: 0
-                                }
-                            }
+                    lineRevenue: {
+                        $multiply: [
+                            { $add: ['$details.unitPrice', { $ifNull: ['$details.damageWaiverFee', 0] }] },
+                            { $ifNull: ['$details.quantity', 0] },
+                            { $ifNull: ['$details.duration', 1] }
+                        ]
+                    },
+                    lineDamageWaiver: {
+                        $multiply: [
+                            { $ifNull: ['$details.damageWaiverFee', 0] },
+                            { $ifNull: ['$details.quantity', 0] },
+                            { $ifNull: ['$details.duration', 1] }
                         ]
                     }
                 }
             },
+            // Gom theo loại xe và chi nhánh
             {
                 $group: {
                     _id: {
-                        vehicleTypeId: '$motorbikeType._id',
-                        vehicleTypeName: '$motorbikeType.name',
+                        vehicleTypeId: '$details.motorbikeTypeId',
+                        vehicleTypeName: '$details.motorbikeType.name',
                         branchId: '$branchReceive._id',
                         branchName: '$branchReceive.city'
                     },
-                    totalRevenue: { $sum: '$motorbikeRevenue' },
-                    totalOrders: { $sum: 1 },
-                    totalQuantity: { $sum: '$motorbikes.quantity' },
-                    averagePrice: { $avg: '$motorbikes.pricePerDay' },
-                    totalDamageWaiver: {
-                        $sum: {
-                            $cond: {
-                                if: '$motorbikes.hasDamageWaiver',
-                                then: { $multiply: ['$motorbikes.pricePerDay', '$motorbikes.quantity', 0.1] },
-                                else: 0
-                            }
-                        }
-                    }
+                    totalRevenue: { $sum: '$lineRevenue' },
+                    totalDamageWaiver: { $sum: '$lineDamageWaiver' },
+                    totalQuantity: { $sum: '$details.quantity' },
+                    totalOrders: { $addToSet: '$_id' } // tạm thu thập order ids để đếm distinct
                 }
             },
+            {
+                $addFields: { totalOrders: { $size: '$totalOrders' } }
+            },
+            // Gom theo loại xe để tổng hợp theo chi nhánh
             {
                 $group: {
                     _id: '$_id.vehicleTypeId',
@@ -524,20 +526,18 @@ const getSalesByVehicleTypeAndBranch = async (req, res) => {
                             branchId: '$_id.branchId',
                             branchName: '$_id.branchName',
                             totalRevenue: '$totalRevenue',
+                            totalDamageWaiver: '$totalDamageWaiver',
                             totalOrders: '$totalOrders',
-                            totalQuantity: '$totalQuantity',
-                            averagePrice: '$averagePrice',
-                            totalDamageWaiver: '$totalDamageWaiver'
+                            totalQuantity: '$totalQuantity'
                         }
                     },
                     totalRevenue: { $sum: '$totalRevenue' },
+                    totalDamageWaiver: { $sum: '$totalDamageWaiver' },
                     totalOrders: { $sum: '$totalOrders' },
                     totalQuantity: { $sum: '$totalQuantity' }
                 }
             },
-            {
-                $sort: { totalRevenue: -1 }
-            }
+            { $sort: { totalRevenue: -1 } }
         ]);
 
         res.status(200).json({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Table, Spin, Tag, Typography, Card, message, Modal, Button, Dropdown, Menu, Layout, Tabs } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -54,24 +54,26 @@ const MyOrderPage = () => {
     const [documentStatus, setDocumentStatus] = useState({}); // { [orderId]: isCompleted }
     const navigate = useNavigate();
     const location = useLocation();
-    const searchParams = queryString.parse(location.search);
-    const orderCode = searchParams.orderCode;
-    const vnpStatus = searchParams.vnp_status;
+    const hasHandledPaymentRef = useRef(false);
 
-    console.log('>>>>>>>orderCode', orderCode);
-    console.log('>>>>>>>vnpStatus', vnpStatus);
-
-    if (orderCode && vnpStatus) {
-        if (vnpStatus === 'success') {
-            message.success('Thanh toán thành công');
-        } else {
-            message.error('Thanh toán thất bại');
+    // Xử lý thông báo thanh toán chỉ 1 lần, tránh lặp do re-render
+    useEffect(() => {
+        const params = queryString.parse(location.search);
+        const orderCode = params.orderCode;
+        const vnpStatus = params.vnp_status;
+        if (orderCode && vnpStatus && !hasHandledPaymentRef.current) {
+            hasHandledPaymentRef.current = true;
+            if (vnpStatus === 'success') {
+                message.destroy();
+                message.success('Thanh toán thành công');
+            } else {
+                message.destroy();
+                message.error('Thanh toán thất bại');
+            }
+            const cleanUrl = location.pathname;
+            navigate(cleanUrl, { replace: true });
         }
-
-        // Clear query params khỏi URL để tránh chạy lại
-        const cleanUrl = location.pathname;
-        navigate(cleanUrl, { replace: true });
-    }
+    }, [location.search, location.pathname, navigate]);
 
 
     useEffect(() => {
@@ -209,32 +211,35 @@ const MyOrderPage = () => {
                 // Always show document button for all order statuses
                 const isDocumentsCompleted = documentStatus[record._id];
 
-                actions.push(
-                    <Button
-                        key="documents"
-                        style={{
-                            background: isDocumentsCompleted
-                                ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
-                                : 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '8px 16px',
-                            fontWeight: '600',
-                            minWidth: '180px',
-                            marginBottom: '8px',
-                            height: '40px',
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                            transition: 'all 0.3s ease'
-                        }}
-                        onClick={() => {
-                            navigate(`/order/documents/${record._id}`);
-                        }}
-                        block
-                    >
-                        {isDocumentsCompleted ? 'Xem hình ảnh giấy tờ' : 'Cung cấp hình ảnh giấy tờ'}
-                    </Button>
-                );
+                // Hiển thị nút giấy tờ cho các trạng thái cho phép (ẩn với completed/active/cancelled)
+                if (!['completed', 'active', 'cancelled'].includes(record.status)) {
+                    actions.push(
+                        <Button
+                            key="documents"
+                            style={{
+                                background: isDocumentsCompleted
+                                    ? 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)'
+                                    : 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '6px 12px',
+                                fontWeight: '600',
+                                minWidth: '140px',
+                                marginBottom: '6px',
+                                height: '36px',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                                transition: 'all 0.3s ease'
+                            }}
+                            onClick={() => {
+                                navigate(`/order/documents/${record._id}`);
+                            }}
+                            block
+                        >
+                            {isDocumentsCompleted ? 'Xem hình ảnh giấy tờ' : 'Cung cấp hình ảnh giấy tờ'}
+                        </Button>
+                    );
+                }
 
                 // Show payment button only for pending orders with completed documents
                 if (record.status === 'pending' && isDocumentsCompleted) {
@@ -246,11 +251,11 @@ const MyOrderPage = () => {
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
-                                padding: '8px 16px',
+                                padding: '6px 12px',
                                 fontWeight: '600',
-                                minWidth: '180px',
-                                marginBottom: '8px',
-                                height: '40px',
+                                minWidth: '150px',
+                                marginBottom: '6px',
+                                height: '36px',
                                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                                 transition: 'all 0.3s ease'
                             }}
@@ -271,34 +276,66 @@ const MyOrderPage = () => {
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
-                                padding: '8px 16px',
+                                padding: '6px 12px',
                                 fontWeight: '600',
-                                minWidth: '140px',
-                                marginBottom: '8px',
-                                height: '40px',
+                                minWidth: '130px',
+                                marginBottom: '6px',
+                                height: '36px',
                                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                                 transition: 'all 0.3s ease'
                             }}
-                            onClick={async () => {
-                                try {
-                                    const token = localStorage.getItem('token');
-                                    const res = await fetch(`http://localhost:8080/api/v1/customer/order/${record._id}/cancel`, {
-                                        method: 'PUT',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            Authorization: `Bearer ${token}`
+                            onClick={() => {
+                                // Tính điều kiện hoàn tiền: hủy trước 8 giờ so với thời gian nhận
+                                const hoursRemain = dayjs(record.receiveDate).diff(dayjs(), 'hour', true);
+                                const eligibleRefund = hoursRemain >= 8;
+                                const refundAmount = Number(record.preDepositTotal) || 0;
+
+                                Modal.confirm({
+                                    title: 'Xác nhận hủy đơn hàng',
+                                    okText: 'Hủy đơn hàng',
+                                    cancelText: 'Không',
+                                    okButtonProps: { danger: true },
+                                    content: (
+                                        <div style={{ lineHeight: 1.7 }}>
+                                            <p>Bạn có chắc chắn muốn hủy đơn hàng <b>{record.orderCode}</b>?</p>
+                                            <p>
+                                                Điều kiện hoàn tiền: hủy trước <b>8 giờ</b> so với thời gian nhận xe.
+                                                {eligibleRefund ? (
+                                                    <> Bạn <b>đủ điều kiện</b> hoàn tiền đặt trước khoảng&nbsp;
+                                                        <b>{refundAmount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</b>.
+                                                    </>
+                                                ) : (
+                                                    <> Bạn <b>không đủ điều kiện</b> hoàn tiền đặt trước.</>
+                                                )}
+                                            </p>
+                                        </div>
+                                    ),
+                                    onOk: async () => {
+                                        try {
+                                            const token = localStorage.getItem('token');
+                                            const res = await fetch(`http://localhost:8080/api/v1/customer/order/${record._id}/cancel`, {
+                                                method: 'PUT',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    Authorization: `Bearer ${token}`
+                                                }
+                                            });
+                                            const data = await res.json();
+                                            if (data.success) {
+                                                if (eligibleRefund && refundAmount > 0) {
+                                                    message.success('Đã hủy đơn. Bạn đủ điều kiện hoàn tiền đặt trước.');
+                                                } else {
+                                                    message.success('Đã hủy đơn. Bạn không đủ điều kiện hoàn tiền đặt trước.');
+                                                }
+                                                setOrders((prev) => prev.map(o => o._id === record._id ? { ...o, status: 'cancelled' } : o));
+                                            } else {
+                                                message.error(data.message || 'Hủy đơn hàng thất bại');
+                                            }
+                                        } catch {
+                                            message.error('Lỗi khi hủy đơn hàng.');
                                         }
-                                    });
-                                    const data = await res.json();
-                                    if (data.success) {
-                                        message.success('Đã hủy đơn hàng thành công');
-                                        setOrders((prev) => prev.map(o => o._id === record._id ? { ...o, status: 'cancelled' } : o));
-                                    } else {
-                                        message.error(data.message || 'Hủy đơn hàng thất bại');
                                     }
-                                } catch {
-                                    message.error('Lỗi khi hủy đơn hàng.');
-                                }
+                                });
                             }}
                             block
                         >
@@ -332,8 +369,8 @@ const MyOrderPage = () => {
                                     color: '#52c41a',
                                     border: '1px solid #b7eb8f',
                                     borderRadius: '8px',
-                                    minWidth: '120px',
-                                    height: '40px',
+                                    minWidth: '110px',
+                                    height: '36px',
                                     fontWeight: '600',
                                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
                                     transition: 'all 0.3s ease'
@@ -351,10 +388,10 @@ const MyOrderPage = () => {
                                     color: '#333',
                                     border: 'none',
                                     borderRadius: '8px',
-                                    padding: '8px 16px',
+                                    padding: '6px 12px',
                                     fontWeight: '600',
-                                    minWidth: '120px',
-                                    height: '40px',
+                                    minWidth: '110px',
+                                    height: '36px',
                                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                                     transition: 'all 0.3s ease'
                                 }}
@@ -371,9 +408,9 @@ const MyOrderPage = () => {
                         key="details"
                         type="primary"
                         style={{
-                            minWidth: '120px',
-                            marginBottom: record.status === 'completed' ? 8 : 0,
-                            height: '40px',
+                            minWidth: '110px',
+                            marginBottom: record.status === 'completed' ? 6 : 0,
+                            height: '36px',
                             borderRadius: '8px',
                             fontWeight: '600',
                             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
@@ -445,6 +482,7 @@ const MyOrderPage = () => {
                     <Typography.Text type="warning" style={{ display: 'block', marginBottom: 16 }}>
                         Lưu ý:
                         <p>
+                            - Quý khách có thể hủy đơn trước 8 giờ so với thời gian nhận xe để được hoàn lại khoản phí đã thanh toán. <br />
                             - Quý khách hủy đơn sẽ phải đến chi nhánh gần nhất để được hoàn lại khoản phí đã thanh toán. <br />
                             - Những đơn hàng chưa thanh toán trong vòng 6 tiếng sẽ bị hủy tự động.  <br />
                             - Quý khách sẽ trả toàn bộ khoản phí còn lại khi nhận xe.

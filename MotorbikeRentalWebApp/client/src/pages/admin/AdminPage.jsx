@@ -360,7 +360,7 @@ const AdminPage = () => {
                     <div className="mb-8">
                         <AntTitle level={2} className="text-center mb-2">
                             <BarChartOutlined className="mr-3 text-indigo-600" />
-                            Bảng điều khiển quản trị
+                            Báo cáo doanh thu
                         </AntTitle>
                         <Text className="text-gray-600 text-center block">
                             Thống kê doanh thu và hiệu suất kinh doanh
@@ -417,55 +417,67 @@ const AdminPage = () => {
                         <>
                             {/* Overall Statistics */}
                             {overallStats && (
-                                <Row gutter={[16, 16]} className="mb-8">
-                                    <Col xs={24} sm={12} lg={6}>
-                                        <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                                            <Statistic
-                                                title="Tổng doanh thu"
-                                                value={overallStats.totalRevenue}
-                                                precision={0}
-                                                valueStyle={{ color: '#3f8600' }}
-                                                prefix={<DollarOutlined />}
-                                                suffix="VND"
-                                                formatter={(value) => formatCurrency(value)}
-                                            />
-                                        </Card>
-                                    </Col>
-                                    <Col xs={24} sm={12} lg={6}>
-                                        <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                                            <Statistic
-                                                title="Tổng đơn hàng"
-                                                value={overallStats.totalOrders}
-                                                valueStyle={{ color: '#1890ff' }}
-                                                prefix={<ShoppingCartOutlined />}
-                                            />
-                                        </Card>
-                                    </Col>
-                                    <Col xs={24} sm={12} lg={6}>
-                                        <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                                            <Statistic
-                                                title="Giá trị đơn hàng TB"
-                                                value={overallStats.averageOrderValue}
-                                                precision={0}
-                                                valueStyle={{ color: '#722ed1' }}
-                                                prefix={<RiseOutlined />}
-                                                suffix="VND"
-                                                formatter={(value) => formatCurrency(value)}
-                                            />
-                                        </Card>
-                                    </Col>
-                                    <Col xs={24} sm={12} lg={6}>
-                                        <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                                            <Statistic
-                                                title="Tỷ lệ hoàn thành"
-                                                value={100}
-                                                suffix="%"
-                                                valueStyle={{ color: '#52c41a' }}
-                                                prefix={<CarOutlined />}
-                                            />
-                                        </Card>
-                                    </Col>
-                                </Row>
+                                <>
+                                    {overallStats.totalRevenue === 0 && overallStats.totalOrders === 0 ? (
+                                        <Alert
+                                            message="Không có dữ liệu doanh thu"
+                                            description="Không có dữ liệu doanh thu trong khoảng thời gian này"
+                                            type="info"
+                                            showIcon
+                                            className="mb-6"
+                                        />
+                                    ) : (
+                                        <Row gutter={[16, 16]} className="mb-8">
+                                            <Col xs={24} sm={12} lg={6}>
+                                                <Card className="shadow-lg hover:shadow-xl transition-shadow">
+                                                    <Statistic
+                                                        title="Tổng doanh thu"
+                                                        value={overallStats.totalRevenue}
+                                                        precision={0}
+                                                        valueStyle={{ color: '#3f8600' }}
+                                                        prefix={<DollarOutlined />}
+                                                        suffix="VND"
+                                                        formatter={(value) => formatCurrency(value)}
+                                                    />
+                                                </Card>
+                                            </Col>
+                                            <Col xs={24} sm={12} lg={6}>
+                                                <Card className="shadow-lg hover:shadow-xl transition-shadow">
+                                                    <Statistic
+                                                        title="Tổng đơn hàng"
+                                                        value={overallStats.totalOrders}
+                                                        valueStyle={{ color: '#1890ff' }}
+                                                        prefix={<ShoppingCartOutlined />}
+                                                    />
+                                                </Card>
+                                            </Col>
+                                            <Col xs={24} sm={12} lg={6}>
+                                                <Card className="shadow-lg hover:shadow-xl transition-shadow">
+                                                    <Statistic
+                                                        title="Giá trị đơn hàng TB"
+                                                        value={overallStats.averageOrderValue}
+                                                        precision={0}
+                                                        valueStyle={{ color: '#722ed1' }}
+                                                        prefix={<RiseOutlined />}
+                                                        suffix="VND"
+                                                        formatter={(value) => formatCurrency(value)}
+                                                    />
+                                                </Card>
+                                            </Col>
+                                            <Col xs={24} sm={12} lg={6}>
+                                                <Card className="shadow-lg hover:shadow-xl transition-shadow">
+                                                    <Statistic
+                                                        title="Tỷ lệ hoàn thành"
+                                                        value={100}
+                                                        suffix="%"
+                                                        valueStyle={{ color: '#52c41a' }}
+                                                        prefix={<CarOutlined />}
+                                                    />
+                                                </Card>
+                                            </Col>
+                                        </Row>
+                                    )}
+                                </>
                             )}
 
                             {/* Charts and Tables */}
@@ -481,27 +493,48 @@ const AdminPage = () => {
                                             <Row gutter={[24, 24]}>
                                                 <Col xs={24} lg={12}>
                                                     <Card title="Doanh thu theo loại xe" className="shadow-md">
-                                                        <div style={{ height: '400px' }}>
-                                                            {salesByVehicleType.length > 0 && (
+                                                        <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {salesByVehicleType.length > 0 ? (
                                                                 <Bar data={vehicleTypeChartData} options={chartOptions} />
+                                                            ) : (
+                                                                <div style={{ textAlign: 'center', color: '#666' }}>
+                                                                    <p>Không có dữ liệu doanh thu theo loại xe</p>
+                                                                    <p>trong khoảng thời gian này</p>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </Card>
                                                 </Col>
                                                 <Col xs={24} lg={12}>
                                                     <Card title="Doanh thu theo chi nhánh" className="shadow-md">
-                                                        <div style={{ height: '400px' }}>
-                                                            {salesByBranch.length > 0 && (
+                                                        <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {salesByBranch.length > 0 ? (
                                                                 <Bar data={branchChartData} options={chartOptions} />
+                                                            ) : (
+                                                                <div style={{ textAlign: 'center', color: '#666' }}>
+                                                                    <p>Không có dữ liệu doanh thu theo chi nhánh</p>
+                                                                    <p>trong khoảng thời gian này</p>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </Card>
                                                 </Col>
-                                                {monthlyRevenueData && (
+                                                {monthlyRevenueData && monthlyRevenueData.datasets[0].data.some(value => value > 0) ? (
                                                     <Col xs={24}>
                                                         <Card title="Doanh thu hàng tháng" className="shadow-md">
                                                             <div style={{ height: '400px' }}>
                                                                 <Line data={monthlyRevenueData} options={lineChartOptions} />
+                                                            </div>
+                                                        </Card>
+                                                    </Col>
+                                                ) : (
+                                                    <Col xs={24}>
+                                                        <Card title="Doanh thu hàng tháng" className="shadow-md">
+                                                            <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div style={{ textAlign: 'center', color: '#666' }}>
+                                                                    <p>Không có dữ liệu doanh thu hàng tháng</p>
+                                                                    <p>trong khoảng thời gian này</p>
+                                                                </div>
                                                             </div>
                                                         </Card>
                                                     </Col>
@@ -514,13 +547,20 @@ const AdminPage = () => {
                                         label: 'Theo loại xe',
                                         children: (
                                             <Card title="Thống kê doanh thu theo loại xe" className="shadow-md">
-                                                <Table
-                                                    columns={vehicleTypeColumns}
-                                                    dataSource={salesByVehicleType}
-                                                    rowKey="_id"
-                                                    pagination={{ pageSize: 10 }}
-                                                    scroll={{ x: true }}
-                                                />
+                                                {salesByVehicleType.length > 0 ? (
+                                                    <Table
+                                                        columns={vehicleTypeColumns}
+                                                        dataSource={salesByVehicleType}
+                                                        rowKey="_id"
+                                                        pagination={{ pageSize: 10 }}
+                                                        scroll={{ x: true }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                                        <p>Không có dữ liệu doanh thu theo loại xe</p>
+                                                        <p>trong khoảng thời gian này</p>
+                                                    </div>
+                                                )}
                                             </Card>
                                         )
                                     },
@@ -529,13 +569,20 @@ const AdminPage = () => {
                                         label: 'Theo chi nhánh',
                                         children: (
                                             <Card title="Thống kê doanh thu theo chi nhánh" className="shadow-md">
-                                                <Table
-                                                    columns={branchColumns}
-                                                    dataSource={salesByBranch}
-                                                    rowKey="_id"
-                                                    pagination={{ pageSize: 10 }}
-                                                    scroll={{ x: true }}
-                                                />
+                                                {salesByBranch.length > 0 ? (
+                                                    <Table
+                                                        columns={branchColumns}
+                                                        dataSource={salesByBranch}
+                                                        rowKey="_id"
+                                                        pagination={{ pageSize: 10 }}
+                                                        scroll={{ x: true }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                                        <p>Không có dữ liệu doanh thu theo chi nhánh</p>
+                                                        <p>trong khoảng thời gian này</p>
+                                                    </div>
+                                                )}
                                             </Card>
                                         )
                                     },
@@ -544,51 +591,58 @@ const AdminPage = () => {
                                         label: 'Chi tiết',
                                         children: (
                                             <Card title="Thống kê chi tiết theo loại xe và chi nhánh" className="shadow-md">
-                                                {salesByTypeAndBranch.map((item, index) => (
-                                                    <div key={index} className="mb-6">
-                                                        <AntTitle level={4} className="mb-4">
-                                                            {item.vehicleTypeName}
-                                                        </AntTitle>
-                                                        <Table
-                                                            columns={[
-                                                                {
-                                                                    title: 'Chi nhánh',
-                                                                    dataIndex: 'branchName',
-                                                                    key: 'branchName',
-                                                                },
-                                                                {
-                                                                    title: 'Doanh thu',
-                                                                    dataIndex: 'totalRevenue',
-                                                                    key: 'totalRevenue',
-                                                                    render: (value) => formatCurrency(value),
-                                                                },
-                                                                {
-                                                                    title: 'Phí bảo hiểm',
-                                                                    dataIndex: 'totalDamageWaiver',
-                                                                    key: 'totalDamageWaiver',
-                                                                    render: (value) => formatCurrency(value || 0),
-                                                                },
-                                                                {
-                                                                    title: 'Số đơn hàng',
-                                                                    dataIndex: 'totalOrders',
-                                                                    key: 'totalOrders',
-                                                                    render: (value) => formatNumber(value),
-                                                                },
-                                                                {
-                                                                    title: 'Số lượng xe',
-                                                                    dataIndex: 'totalQuantity',
-                                                                    key: 'totalQuantity',
-                                                                    render: (value) => formatNumber(value),
-                                                                }
-                                                            ]}
-                                                            dataSource={item.branches}
-                                                            rowKey="branchId"
-                                                            pagination={false}
-                                                            size="small"
-                                                        />
-                                                        <Divider />
+                                                {salesByTypeAndBranch.length > 0 ? (
+                                                    salesByTypeAndBranch.map((item, index) => (
+                                                        <div key={index} className="mb-6">
+                                                            <AntTitle level={4} className="mb-4">
+                                                                {item.vehicleTypeName}
+                                                            </AntTitle>
+                                                            <Table
+                                                                columns={[
+                                                                    {
+                                                                        title: 'Chi nhánh',
+                                                                        dataIndex: 'branchName',
+                                                                        key: 'branchName',
+                                                                    },
+                                                                    {
+                                                                        title: 'Doanh thu',
+                                                                        dataIndex: 'totalRevenue',
+                                                                        key: 'totalRevenue',
+                                                                        render: (value) => formatCurrency(value),
+                                                                    },
+                                                                    {
+                                                                        title: 'Phí bảo hiểm',
+                                                                        dataIndex: 'totalDamageWaiver',
+                                                                        key: 'totalDamageWaiver',
+                                                                        render: (value) => formatCurrency(value || 0),
+                                                                    },
+                                                                    {
+                                                                        title: 'Số đơn hàng',
+                                                                        dataIndex: 'totalOrders',
+                                                                        key: 'totalOrders',
+                                                                        render: (value) => formatNumber(value),
+                                                                    },
+                                                                    {
+                                                                        title: 'Số lượng xe',
+                                                                        dataIndex: 'totalQuantity',
+                                                                        key: 'totalQuantity',
+                                                                        render: (value) => formatNumber(value),
+                                                                    }
+                                                                ]}
+                                                                dataSource={item.branches}
+                                                                rowKey="branchId"
+                                                                pagination={false}
+                                                                size="small"
+                                                            />
+                                                            <Divider />
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                                        <p>Không có dữ liệu chi tiết theo loại xe và chi nhánh</p>
+                                                        <p>trong khoảng thời gian này</p>
                                                     </div>
-                                                ))}
+                                                )}
                                             </Card>
                                         )
                                     },
@@ -597,13 +651,20 @@ const AdminPage = () => {
                                         label: 'Đơn hàng gần đây',
                                         children: (
                                             <Card title="10 đơn hàng gần đây" className="shadow-md">
-                                                <Table
-                                                    columns={recentOrdersColumns}
-                                                    dataSource={recentOrders}
-                                                    rowKey="_id"
-                                                    pagination={false}
-                                                    scroll={{ x: true }}
-                                                />
+                                                {recentOrders.length > 0 ? (
+                                                    <Table
+                                                        columns={recentOrdersColumns}
+                                                        dataSource={recentOrders}
+                                                        rowKey="_id"
+                                                        pagination={false}
+                                                        scroll={{ x: true }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                                        <p>Không có đơn hàng gần đây</p>
+                                                        <p>trong khoảng thời gian này</p>
+                                                    </div>
+                                                )}
                                             </Card>
                                         )
                                     }

@@ -11,7 +11,7 @@ const registerController = async (req, res) => {
         if (existingUser) {
             return res.status(200).send({
                 success: false,
-                message: 'User Already Exist'
+                message: 'Người dùng đã tồn tại'
             })
         }
 
@@ -56,7 +56,7 @@ const loginController = async (req, res) => {
         const user = await userModel.findOne({ email: req.body.email }).populate('role');
         if (!user) {
             return res.status(200).send({
-                message: 'User not found',
+                message: 'Email hoặc mật khẩu không chính xác',
                 success: false,
             });
         }
@@ -64,7 +64,7 @@ const loginController = async (req, res) => {
         const isMatch = await bcrypt.compare(req.body.password, user.password);
         if (!isMatch) {
             return res.status(200).send({
-                message: 'Invalid Email or Password',
+                message: 'Email hoặc mật khẩu không chính xác',
                 success: false,
             });
         }

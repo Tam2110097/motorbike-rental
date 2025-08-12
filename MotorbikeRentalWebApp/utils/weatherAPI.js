@@ -6,11 +6,37 @@ class WeatherAPI {
         this.baseURL = 'https://api.openweathermap.org/data/2.5';
     }
 
+    // Hàm mapping tên thành phố từ tiếng Việt sang tên API
+    mapCityName(vietnameseName) {
+        const cityMapping = {
+            'Hà Nội': 'Hanoi, Vietnam',
+            'Hồ Chí Minh': 'Ho Chi Minh City, Vietnam',
+            'Đà Nẵng': 'Da Nang, Vietnam',
+            'Huế': 'Hue, Vietnam',
+            'Nha Trang': 'Nha Trang, Vietnam',
+            'Phú Quốc': 'Phu Quoc, Vietnam',
+            'Sapa': 'Sapa, Vietnam',
+            'Mai Châu': 'Mai Chau, Vietnam',
+            'Cần Thơ': 'Can Tho, Vietnam',
+            'Hải Phòng': 'Hai Phong, Vietnam',
+            'Vũng Tàu': 'Vung Tau, Vietnam',
+            'Đà Lạt': 'Dalat, Vietnam',
+            'Phan Thiết': 'Phan Thiet, Vietnam',
+            'Quy Nhơn': 'Quy Nhon, Vietnam',
+            'Buôn Ma Thuột': 'Buon Ma Thuot, Vietnam'
+        };
+
+        return cityMapping[vietnameseName] || `${vietnameseName}, Vietnam`;
+    }
+
     async getCurrentWeather(city) {
         try {
+            const mappedCity = this.mapCityName(city);
+            console.log(`🌤️ Fetching weather for: ${city} -> ${mappedCity}`);
+
             const response = await axios.get(`${this.baseURL}/weather`, {
                 params: {
-                    q: city,
+                    q: mappedCity,
                     appid: this.apiKey,
                     units: 'metric'
                 }
@@ -25,16 +51,19 @@ class WeatherAPI {
                 icon: response.data.weather[0].icon
             };
         } catch (error) {
-            console.error('Error fetching current weather:', error.message);
-            throw new Error('Failed to fetch weather data');
+            console.error(`❌ Error fetching current weather for ${city}:`, error.message);
+            throw new Error(`Failed to fetch weather data for ${city}`);
         }
     }
 
     async getForecast(city, days = 7) {
         try {
+            const mappedCity = this.mapCityName(city);
+            console.log(`🌤️ Fetching forecast for: ${city} -> ${mappedCity}`);
+
             const response = await axios.get(`${this.baseURL}/forecast`, {
                 params: {
-                    q: city,
+                    q: mappedCity,
                     appid: this.apiKey,
                     units: 'metric',
                     cnt: days * 8 // 8 forecasts per day (every 3 hours)
@@ -83,8 +112,8 @@ class WeatherAPI {
 
             return dailyForecasts.slice(0, days);
         } catch (error) {
-            console.error('Error fetching forecast:', error.message);
-            throw new Error('Failed to fetch forecast data');
+            console.error(`❌ Error fetching forecast for ${city}:`, error.message);
+            throw new Error(`Failed to fetch forecast data for ${city}`);
         }
     }
 

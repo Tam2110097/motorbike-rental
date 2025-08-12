@@ -82,7 +82,7 @@ export const adminMenu = [
     },
     {
         path: "/admin/demand-prediction",
-        icon: NotificationOutlined,
+        icon: LaptopOutlined,
         label: "Xem dự đoán nhu cầu",
     },
 ]

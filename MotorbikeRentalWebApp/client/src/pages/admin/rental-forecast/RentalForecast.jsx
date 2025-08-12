@@ -39,7 +39,7 @@ ChartJS.register(
 );
 
 const RentalForecast = () => {
-    const [selectedCity, setSelectedCity] = useState('Hanoi');
+    const [selectedCity, setSelectedCity] = useState('');
     const [cities, setCities] = useState([]);
     const [forecast, setForecast] = useState(null);
     const [weather, setWeather] = useState(null);
@@ -54,7 +54,7 @@ const RentalForecast = () => {
     }, []);
 
     useEffect(() => {
-        if (selectedCity) {
+        if (selectedCity && selectedCity.trim() !== '') {
             fetchForecast();
             fetchWeather();
         }
@@ -349,27 +349,52 @@ const RentalForecast = () => {
 
                         {/* City Selection */}
                         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 transform hover:shadow-2xl transition-shadow duration-300">
-                            <div className="flex items-center mb-6">
-                                <div className="bg-gradient-to-r from-red-500 to-pink-500 p-3 rounded-full mr-4">
-                                    <FaMapMarkerAlt className="text-white text-xl" />
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center">
+                                    <div className="bg-gradient-to-r from-red-500 to-pink-500 p-3 rounded-full mr-4">
+                                        <FaMapMarkerAlt className="text-white text-xl" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-800">Chọn Thành Phố</h2>
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-800">Chọn Thành Phố</h2>
+                                <div className="text-right">
+                                    <p className="text-sm text-gray-600">
+                                        Tổng cộng: <span className="font-semibold text-indigo-600">{cities.length} thành phố</span>
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                        <span className="font-semibold text-green-600">
+                                            {cities.reduce((total, city) => total + city.branchCount, 0)} chi nhánh
+                                        </span> hoạt động
+                                    </p>
+                                </div>
                             </div>
                             <select
                                 value={selectedCity}
                                 onChange={(e) => setSelectedCity(e.target.value)}
                                 className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500 focus:border-transparent text-lg font-medium transition-all duration-300 hover:border-indigo-300"
                             >
+                                <option value="">Chọn thành phố để xem dự báo</option>
                                 {cities.map((city) => (
                                     <option key={city.name} value={city.name}>
-                                        {city.name}, {city.country}
+                                        {city.name}, {city.country} ({city.branchCount} chi nhánh)
                                     </option>
                                 ))}
                             </select>
                         </div>
 
                         {/* Current Weather */}
-                        {weather && (
+                        {!selectedCity && (
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 mb-8 text-center">
+                                <div className="text-blue-600 mb-4">
+                                    <FaMapMarkerAlt className="text-4xl mx-auto mb-4" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Chọn Thành Phố</h3>
+                                <p className="text-gray-600">
+                                    Vui lòng chọn một thành phố từ danh sách trên để xem dự báo thuê xe và thông tin thời tiết.
+                                </p>
+                            </div>
+                        )}
+
+                        {weather && selectedCity && (
                             <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 transform hover:shadow-2xl transition-shadow duration-300">
                                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                                     <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-3 rounded-full mr-4">
@@ -413,7 +438,7 @@ const RentalForecast = () => {
                         )}
 
                         {/* Loading State */}
-                        {loading && (
+                        {loading && selectedCity && (
                             <div className="bg-white rounded-2xl shadow-xl p-12 text-center transform hover:shadow-2xl transition-shadow duration-300">
                                 <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-600 border-t-transparent mx-auto mb-6"></div>
                                 <p className="text-gray-600 text-lg font-medium">Đang tạo dự báo thuê xe...</p>
@@ -421,7 +446,7 @@ const RentalForecast = () => {
                         )}
 
                         {/* Error State */}
-                        {error && (
+                        {error && selectedCity && (
                             <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 rounded-2xl p-6 mb-8">
                                 <p className="text-red-600 text-lg font-medium">{error}</p>
                                 <button
@@ -434,7 +459,7 @@ const RentalForecast = () => {
                         )}
 
                         {/* Forecast Results */}
-                        {forecast && forecast.forecast && !loading && (
+                        {forecast && forecast.forecast && !loading && selectedCity && (
                             <div className="space-y-8">
                                 {/* Summary Card */}
                                 <div className="bg-white rounded-2xl shadow-xl p-8 transform hover:shadow-2xl transition-shadow duration-300">
@@ -460,10 +485,10 @@ const RentalForecast = () => {
                                             </p>
                                         </div>
                                         <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-200 hover:shadow-lg transition-shadow duration-300">
-                                            <p className="text-sm text-gray-600 font-medium mb-2">Độ tin cậy mô hình</p>
-                                            <p className="text-xl font-bold text-purple-600">
+                                            {/* <p className="text-sm text-gray-600 font-medium mb-2">Độ tin cậy mô hình</p> */}
+                                            {/* <p className="text-xl font-bold text-purple-600">
                                                 {Math.round(forecast.forecast.reduce((sum, day) => sum + day.confidence, 0) / 7 * 100)}%
-                                            </p>
+                                            </p> */}
                                         </div>
                                     </div>
                                 </div>

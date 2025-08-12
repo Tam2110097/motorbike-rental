@@ -12,13 +12,11 @@ const UploadImage = ({ onFileSelect, initImage }) => {
   }, [initImage]); // Cập nhật nếu `initImage` thay đổi
 
   const handleSelectFile = (file) => {
-    console.log("File được chọn:", file);
     const objectURL = URL.createObjectURL(file);
     setImageUrl(objectURL);
     onFileSelect(file); // Trả file về component cha
     return false; // Ngăn Ant Design tự động upload
   };
-
   return (
     <Upload listType="picture-card" showUploadList={false} beforeUpload={handleSelectFile}>
       {imageUrl ? (

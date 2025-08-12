@@ -19,7 +19,7 @@ const LocationTrackingPage = () => {
     const [rentedMotorbikes, setRentedMotorbikes] = useState([]);
     const [selectedMotorbike, setSelectedMotorbike] = useState(null);
     const [locationHistory, setLocationHistory] = useState([]);
-    const [simulationStatus, setSimulationStatus] = useState({});
+    // const [simulationStatus, setSimulationStatus] = useState({});
     const [loading, setLoading] = useState(false);
     const [socket, setSocket] = useState(null);
     const [userPosition, setUserPosition] = useState(null);
@@ -226,7 +226,7 @@ const LocationTrackingPage = () => {
     };
 
     // Get and save location data only from rented motorbikes
-    const getAndSaveRentedMotorbikeLocations = async () => {
+    /* const getAndSaveRentedMotorbikeLocations = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
@@ -249,10 +249,10 @@ const LocationTrackingPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }; */
 
     // Fetch simulation status
-    const fetchSimulationStatus = async () => {
+    /* const fetchSimulationStatus = async () => {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get('/api/v1/employee/location/simulation/status', {
@@ -264,10 +264,10 @@ const LocationTrackingPage = () => {
         } catch (error) {
             console.error('Error fetching simulation status:', error);
         }
-    };
+    }; */
 
     // Start simulation for all rented motorbikes
-    const startAllSimulations = async () => {
+    /* const startAllSimulations = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
@@ -284,10 +284,10 @@ const LocationTrackingPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }; */
 
     // Stop all simulations
-    const stopAllSimulations = async () => {
+    /* const stopAllSimulations = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
@@ -304,10 +304,10 @@ const LocationTrackingPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }; */
 
     // Start simulation for specific motorbike
-    const startMotorbikeSimulation = async (motorbikeId) => {
+    /* const startMotorbikeSimulation = async (motorbikeId) => {
         try {
             const token = localStorage.getItem('token');
             await axios.post(`/api/v1/employee/location/simulation/start/${motorbikeId}`, {}, {
@@ -321,10 +321,10 @@ const LocationTrackingPage = () => {
             console.error('Error starting simulation:', error);
             toast.error('Failed to start GPS simulation');
         }
-    };
+    }; */
 
     // Stop simulation for specific motorbike
-    const stopMotorbikeSimulation = async (motorbikeId) => {
+    /* const stopMotorbikeSimulation = async (motorbikeId) => {
         try {
             const token = localStorage.getItem('token');
             await axios.post(`/api/v1/employee/location/simulation/stop/${motorbikeId}`, {}, {
@@ -338,7 +338,7 @@ const LocationTrackingPage = () => {
             console.error('Error stopping simulation:', error);
             toast.error('Failed to stop GPS simulation');
         }
-    };
+    }; */
 
     // Fetch location history for selected motorbike
     const fetchLocationHistory = async (motorbikeId) => {
@@ -365,7 +365,7 @@ const LocationTrackingPage = () => {
     // Initial data fetch
     useEffect(() => {
         fetchRentedMotorbikes();
-        fetchSimulationStatus();
+        // fetchSimulationStatus();
     }, []);
 
     console.log('Tất cả vị trí:', (rentedMotorbikes || []).map(i => i.location));
@@ -686,8 +686,8 @@ const LocationTrackingPage = () => {
                 </style>
 
                 <div className="location-tracking-header">
-                    <h1>🚗 GPS Location Tracking</h1>
-                    <p>Monitor real-time location of rented motorbikes with live updates</p>
+                    <h1>🚗 Theo dõi vị trí GPS</h1>
+                    <p>Giám sát vị trí xe đang thuê theo thời gian thực với cập nhật trực tiếp</p>
                 </div>
 
                 {/* Bản đồ vị trí các xe đang thuê */}
@@ -723,6 +723,23 @@ const LocationTrackingPage = () => {
                                 <Marker
                                     key={motorbikeId}
                                     position={[lat, lng]}
+                                    eventHandlers={{
+                                        click: async () => {
+                                            try {
+                                                // Ưu tiên vị trí thật: reverse geocoding từ serverLat/serverLng nếu có, nếu không thì từ lat/lng hiện tại
+                                                const revLat = motorbike.location?.latitude ?? lat;
+                                                const revLng = motorbike.location?.longitude ?? lng;
+                                                const { data } = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${revLat}&lon=${revLng}`);
+                                                const address = data?.display_name;
+                                                if (address) {
+                                                    // Lưu kèm địa chỉ vào item để hiện trong Popup (không làm thay đổi DB)
+                                                    setRentedMotorbikes(prev => prev.map(it => it.motorbike._id === motorbikeId ? { ...it, resolvedAddress: address } : it));
+                                                }
+                                            } catch {
+                                                // ignore
+                                            }
+                                        }
+                                    }}
                                     icon={L.icon({
                                         iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
                                         iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -737,8 +754,25 @@ const LocationTrackingPage = () => {
                                         <div>
                                             <strong>{motorbike.motorbike.code}</strong><br />
                                             {motorbike.motorbike.motorbikeType?.name}<br />
-                                            Vĩ độ: {lat.toFixed(5)}<br />
-                                            Kinh độ: {lng.toFixed(5)}<br />
+                                            {motorbike.resolvedAddress ? (
+                                                <>
+                                                    Địa chỉ: <span>{motorbike.resolvedAddress}</span><br />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Vĩ độ: {lat.toFixed(5)}<br />
+                                                    Kinh độ: {lng.toFixed(5)}<br />
+                                                    <span style={{ color: '#6b7280' }}>Nhấp vào marker để tra địa chỉ</span><br />
+                                                </>
+                                            )}
+                                            {motorbike.customer ? (
+                                                <div style={{ marginTop: 6 }}>
+                                                    Khách: <b>{motorbike.customer.fullName}</b><br />
+                                                    SĐT: <a href={`tel:${motorbike.customer.phone}`}>{motorbike.customer.phone}</a>
+                                                </div>
+                                            ) : (
+                                                <div style={{ marginTop: 6, color: '#6b7280' }}>Chưa có thông tin khách hàng</div>
+                                            )}
                                             <span style={{ color: 'green' }}>🔄 Đang di chuyển</span>
                                         </div>
                                     </Popup>
@@ -749,9 +783,9 @@ const LocationTrackingPage = () => {
                 </div>
 
                 {/* Control Panel */}
-                <div className="control-panel">
+                {/* <div className="control-panel">
                     <div className="control-panel-header">
-                        🎮 Simulation Controls
+                        🎮 Điều khiển mô phỏng
                     </div>
                     <div className="control-buttons">
                         <button
@@ -759,49 +793,48 @@ const LocationTrackingPage = () => {
                             disabled={loading}
                             className="control-button btn-start"
                         >
-                            {loading ? '🔄 Starting...' : '▶️ Start All Simulations'}
+                            {loading ? '🔄 Đang khởi động...' : '▶️ Bắt đầu mô phỏng tất cả'}
                         </button>
                         <button
                             onClick={stopAllSimulations}
                             disabled={loading}
                             className="control-button btn-stop"
                         >
-                            {loading ? '🔄 Stopping...' : '⏹️ Stop All Simulations'}
+                            {loading ? '🔄 Đang dừng...' : '⏹️ Dừng toàn bộ mô phỏng'}
                         </button>
                         <button
                             onClick={getAndSaveRentedMotorbikeLocations}
                             disabled={loading}
                             className="control-button btn-get"
                         >
-                            {loading ? '🔄 Processing...' : '📥 Get & Save Rented Locations'}
+                            {loading ? '🔄 Đang xử lý...' : '📥 Lấy & lưu vị trí xe đang thuê'}
                         </button>
                     </div>
                     <div className="status-info">
-                        <strong>📊 Status:</strong> Active Simulations: {simulationStatus?.totalActive ?? 0}
+                        <strong>📊 Trạng thái:</strong> Số mô phỏng đang chạy: {simulationStatus?.totalActive ?? 0}
                         {simulationStatus?.hasRentedMotorbikes !== undefined && (
                             <span style={{ marginLeft: '16px' }}>
-                                Has Rented Motorbikes: {simulationStatus.hasRentedMotorbikes ? '✅ Yes' : '❌ No'}
+                                Có xe đang thuê: {simulationStatus.hasRentedMotorbikes ? '✅ Có' : '❌ Không'}
                             </span>
                         )}
                     </div>
-                </div>
+                </div> */}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Rented Motorbikes List */}
                     <div className="motorbike-card">
                         <div className="location-details-header">
-                            🏍️ Rented Motorbikes
+                            🏍️ Danh sách xe đang thuê
                         </div>
                         <div className="location-details-content">
                             {loading ? (
                                 <div className="empty-state">
                                     <div className="empty-state-icon">🔄</div>
-                                    <div>Loading motorbikes...</div>
+                                    <div>Đang tải danh sách xe...</div>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {(rentedMotorbikes || []).map((item) => {
-                                        const isActive = simulationStatus.activeSimulations?.includes(item.motorbike._id);
                                         const currentPosition = motorbikePositions[item.motorbike._id];
                                         return (
                                             <div
@@ -813,14 +846,19 @@ const LocationTrackingPage = () => {
                                                     <div className="flex justify-between items-start">
                                                         <div className="motorbike-info">
                                                             <h3>{item.motorbike.code}</h3>
-                                                            <p>{item.motorbike.motorbikeType?.name || 'Unknown Type'}</p>
-                                                            <p>Branch: {item.motorbike.branchId?.name || 'Unknown Branch'}</p>
+                                                            <p>{item.motorbike.motorbikeType?.name || 'Không rõ loại'}</p>
+                                                            {item.customer && (
+                                                                <p>
+                                                                    Khách: <b>{item.customer.fullName}</b> — {item.customer.phone}
+                                                                    {item.customer.orderCode ? ` (Mã đơn: ${item.customer.orderCode})` : ''}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <div className="flex flex-col gap-2">
-                                                            <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
-                                                                {isActive ? '🟢 Active' : '⚪ Inactive'}
-                                                            </span>
-                                                            <div className="action-buttons">
+                                                            {/* <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
+                                                                {isActive ? '🟢 Đang mô phỏng' : '⚪ Tạm dừng'}
+                                                            </span> */}
+                                                            {/* <div className="action-buttons">
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -828,7 +866,7 @@ const LocationTrackingPage = () => {
                                                                     }}
                                                                     className="action-btn btn-start-small"
                                                                 >
-                                                                    ▶️ Start
+                                                                    ▶️ Bắt đầu
                                                                 </button>
                                                                 <button
                                                                     onClick={(e) => {
@@ -837,14 +875,14 @@ const LocationTrackingPage = () => {
                                                                     }}
                                                                     className="action-btn btn-stop-small"
                                                                 >
-                                                                    ⏹️ Stop
+                                                                    ⏹️ Dừng
                                                                 </button>
-                                                            </div>
+                                                            </div> */}
                                                         </div>
                                                     </div>
                                                     {currentPosition && (
                                                         <div className="position-info">
-                                                            📍 Current Position: {currentPosition[0].toFixed(6)}, {currentPosition[1].toFixed(6)}
+                                                            📍 Vị trí hiện tại: {currentPosition[0].toFixed(6)}, {currentPosition[1].toFixed(6)}
                                                         </div>
                                                     )}
                                                 </div>
@@ -859,7 +897,7 @@ const LocationTrackingPage = () => {
                     {/* Location Details */}
                     <div className="location-details-card">
                         <div className="location-details-header">
-                            📍 Location Details
+                            📍 Chi tiết vị trí
                         </div>
                         <div className="location-details-content">
                             {selectedMotorbike ? (
@@ -869,29 +907,29 @@ const LocationTrackingPage = () => {
                                             {selectedMotorbike.code}
                                         </h3>
                                         <p className="text-sm text-gray-600">
-                                            {selectedMotorbike.motorbikeType?.name || 'Unknown Type'}
+                                            {selectedMotorbike.motorbikeType?.name || 'Không rõ loại'}
                                         </p>
                                     </div>
 
                                     {/* Current Location */}
                                     {locationHistory.length > 0 && (
                                         <div className="current-location-box">
-                                            <h4 className="font-semibold mb-3" style={{ color: '#1890ff' }}>📍 Current Location</h4>
+                                            <h4 className="font-semibold mb-3" style={{ color: '#1890ff' }}>📍 Vị trí hiện tại</h4>
                                             <div className="location-grid">
                                                 <div className="location-item">
-                                                    <span className="location-label">Latitude:</span>
+                                                    <span className="location-label">Vĩ độ:</span>
                                                     <span className="location-value">{locationHistory[0].latitude.toFixed(6)}</span>
                                                 </div>
                                                 <div className="location-item">
-                                                    <span className="location-label">Longitude:</span>
+                                                    <span className="location-label">Kinh độ:</span>
                                                     <span className="location-value">{locationHistory[0].longitude.toFixed(6)}</span>
                                                 </div>
                                                 <div className="location-item">
-                                                    <span className="location-label">Speed:</span>
+                                                    <span className="location-label">Tốc độ:</span>
                                                     <span className="location-value" style={{ color: '#52c41a' }}>{locationHistory[0].speed.toFixed(1)} km/h</span>
                                                 </div>
                                                 <div className="location-item">
-                                                    <span className="location-label">Heading:</span>
+                                                    <span className="location-label">Hướng đi (heading):</span>
                                                     <span className="location-value" style={{ color: '#fa8c16' }}>{locationHistory[0].heading.toFixed(1)}°</span>
                                                 </div>
                                             </div>
@@ -900,7 +938,7 @@ const LocationTrackingPage = () => {
 
                                     {/* Location History */}
                                     <div>
-                                        <h4 className="font-semibold mb-3" style={{ color: '#1890ff' }}>📊 Location History</h4>
+                                        <h4 className="font-semibold mb-3" style={{ color: '#1890ff' }}>📊 Lịch sử vị trí</h4>
                                         <div className="location-history">
                                             {locationHistory.length > 0 ? (
                                                 <div className="space-y-2">
@@ -911,11 +949,11 @@ const LocationTrackingPage = () => {
                                                                     {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                                                                 </span>
                                                                 <span className="history-time">
-                                                                    {new Date(location.timestamp).toLocaleTimeString()}
+                                                                    {new Date(location.timestamp).toLocaleTimeString('vi-VN')}
                                                                 </span>
                                                             </div>
                                                             <div className="history-details">
-                                                                Speed: {location.speed.toFixed(1)} km/h | Heading: {location.heading.toFixed(1)}°
+                                                                Tốc độ: {location.speed.toFixed(1)} km/h | Hướng đi: {location.heading.toFixed(1)}°
                                                             </div>
                                                         </div>
                                                     ))}
@@ -923,7 +961,7 @@ const LocationTrackingPage = () => {
                                             ) : (
                                                 <div className="empty-state">
                                                     <div className="empty-state-icon">📊</div>
-                                                    <div>No location history available</div>
+                                                    <div>Chưa có dữ liệu lịch sử vị trí</div>
                                                 </div>
                                             )}
                                         </div>
@@ -932,7 +970,7 @@ const LocationTrackingPage = () => {
                             ) : (
                                 <div className="empty-state">
                                     <div className="empty-state-icon">🏍️</div>
-                                    <div>Select a motorbike to view location details</div>
+                                    <div>Hãy chọn một xe để xem chi tiết vị trí</div>
                                 </div>
                             )}
                         </div>

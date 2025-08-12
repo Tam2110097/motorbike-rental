@@ -25,7 +25,11 @@ const Register = () => {
         } catch (error) {
             dispatch(hideLoading())
             console.log(error);
-            message.error('Đã xảy ra lỗi')
+            if (error.response?.data?.message) {
+                message.error(error.response.data.message)
+            } else {
+                message.error('Đã xảy ra lỗi khi đăng ký')
+            }
         }
     }
 
@@ -33,17 +37,42 @@ const Register = () => {
         <div className="form-container">
             <Form layout='vertical' onFinish={onFinishHandler} className="register-form">
                 <h3 className='text-center'>Đăng Ký</h3>
-                <Form.Item label='Họ và tên' name="fullName">
-                    <Input type='text' required placeholder="Nhập họ và tên của bạn" />
+                <Form.Item
+                    label='Họ và tên'
+                    name="fullName"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập họ và tên!' }
+                    ]}
+                >
+                    <Input type='text' placeholder="Nhập họ và tên của bạn" />
                 </Form.Item>
-                <Form.Item label='Email' name="email">
-                    <Input type='email' required placeholder="Nhập email của bạn" />
+                <Form.Item
+                    label='Email'
+                    name="email"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập email!' },
+                        { type: 'email', message: 'Email không đúng định dạng!' }
+                    ]}
+                >
+                    <Input type='email' placeholder="Nhập email của bạn" />
                 </Form.Item>
-                <Form.Item label='Số điện thoại' name="phone">
-                    <Input type='text' required placeholder="Nhập số điện thoại của bạn" />
+                <Form.Item
+                    label='Số điện thoại'
+                    name="phone"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập số điện thoại!' }
+                    ]}
+                >
+                    <Input type='text' placeholder="Nhập số điện thoại của bạn" />
                 </Form.Item>
-                <Form.Item label='Mật khẩu' name="password">
-                    <Input type='password' required placeholder="Nhập mật khẩu của bạn" />
+                <Form.Item
+                    label='Mật khẩu'
+                    name="password"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập mật khẩu!' }
+                    ]}
+                >
+                    <Input type='password' placeholder="Nhập mật khẩu của bạn" />
                 </Form.Item>
                 <Link to="/login" className='m-2'>Đã có tài khoản? Đăng nhập tại đây</Link>
                 <Button type='primary' htmlType="submit">Đăng Ký</Button>

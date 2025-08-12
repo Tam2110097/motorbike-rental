@@ -1,5 +1,6 @@
 const LocationModel = require('../../models/locationModels');
 const MotorbikeModel = require('../../models/motorbikeModels');
+const RentalOrderModel = require('../../models/rentalOrderModels');
 const gpsSimulator = require('../../utils/gpsSimulatorService');
 
 // Get current location of all rented motorbikes
@@ -18,6 +19,14 @@ const getAllRentedMotorbikeLocations = async (req, res) => {
                 isActive: true
             }).sort({ timestamp: -1 });
 
+            // Tìm đơn hàng đang hoạt động gắn với xe này để lấy thông tin khách hàng
+            const activeOrder = await RentalOrderModel.findOne({
+                status: 'active',
+                'motorbikes.motorbikeId': motorbike._id
+            })
+                .populate('customerId', 'fullName phone email')
+                .select('orderCode customerId');
+
             locationsWithMotorbikes.push({
                 motorbike: {
                     _id: motorbike._id,
@@ -26,7 +35,14 @@ const getAllRentedMotorbikeLocations = async (req, res) => {
                     branchId: motorbike.branchId,
                     status: motorbike.status
                 },
-                location: currentLocation || null
+                location: currentLocation || null,
+                customer: activeOrder && activeOrder.customerId ? {
+                    _id: activeOrder.customerId._id,
+                    fullName: activeOrder.customerId.fullName,
+                    phone: activeOrder.customerId.phone,
+                    email: activeOrder.customerId.email,
+                    orderCode: activeOrder.orderCode
+                } : null
             });
         }
 
