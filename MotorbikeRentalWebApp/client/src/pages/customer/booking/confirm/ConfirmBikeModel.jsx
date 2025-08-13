@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import HeaderBar from '../../../../components/HeaderBar'
 import Footer from '../../../../components/Footer'
 import { Layout } from 'antd'
@@ -8,6 +8,7 @@ import Accessory from './components/Accessory'
 import ContinueButton from '../common/ContinueButton'
 // import { useBooking } from '../../../context/BookingContext'
 import Prices from './components/Prices'
+import TimeLine from '../../../../components/TimeLine'
 
 const { Content } = Layout
 
@@ -29,11 +30,18 @@ const pageTitleStyle = {
 
 const ConfirmBikeModel = () => {
     // const { bookingData } = useBooking()
+
+    // Auto scroll to top when component mounts
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     return (
         <Layout style={{ minHeight: '100vh' }}>
             <HeaderBar />
             <Content style={{ padding: '24px', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+                    <TimeLine />
                     <div style={{ marginBottom: 24 }}>
                         <h1 style={pageTitleStyle}>
                             Xác nhận đặt xe

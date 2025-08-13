@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Layout } from 'antd'
 import HeaderBar from '../../../../components/HeaderBar'
 import Footer from '../../../../components/Footer'
@@ -9,6 +9,7 @@ import PolicyAgreement from './components/PolicyAgreement'
 import ContinueButton from '../common/ContinueButton'
 import { useNavigate } from 'react-router-dom'
 import { useBooking } from '../../../../context/BookingContext'
+import TimeLine from '../../../../components/TimeLine'
 
 const { Content } = Layout
 
@@ -33,6 +34,11 @@ const OrderReviewPage = () => {
     const [showPolicyError, setShowPolicyError] = useState(false)
     const navigate = useNavigate()
     const { bookingData } = useBooking();
+
+    // Auto scroll to top when component mounts
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
     const handlePolicyChange = (policies) => {
         const allAccepted = policies.rentalPolicy && policies.safetyPolicy
         setPoliciesAccepted(allAccepted)
@@ -53,6 +59,7 @@ const OrderReviewPage = () => {
             <HeaderBar />
             <Content style={{ padding: '24px', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+                    <TimeLine />
                     <div style={{ marginBottom: 24 }}>
                         <h1 style={pageTitleStyle}>
                             Xem lại đơn hàng

@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PickAddress from './components/PickAddress';
 import dayjs from 'dayjs';
+import TimeLine from '../../../../components/TimeLine';
 
 const { Content } = Layout
 const token = localStorage.getItem('token');
@@ -39,6 +40,11 @@ const CheckoutPage = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const navigate = useNavigate();
     const [receiveAddress, setReceiveAddress] = useState('');
+
+    // Auto scroll to top when component mounts
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
     useEffect(() => {
         // Check login status (adjust according to your auth logic)
         const token = localStorage.getItem('token');
@@ -241,6 +247,7 @@ const CheckoutPage = () => {
                     margin: '0 auto',
                     padding: '0 16px'
                 }}>
+                    <TimeLine />
                     <div style={{ marginBottom: 32 }}>
                         <h1 style={pageTitleStyle}>
                             Thanh toán đơn hàng
