@@ -27,6 +27,7 @@ const {
 const {
     getAllOrders,
     getOrderById,
+    cancelOrder,
     getInvoiceData,
     getAccessoryDetailsForOrder,
     getFullInvoiceData,
@@ -124,6 +125,7 @@ router.patch('/motorbike/update-status/:id', authMiddleware, authorizeRoles('emp
 */
 router.get('/order/get-all', authMiddleware, authorizeRoles('employee'), getAllOrders);
 router.get('/order/:id', authMiddleware, authorizeRoles('employee'), getOrderById);
+router.put('/order/:id/cancel', authMiddleware, authorizeRoles('employee'), cancelOrder);
 router.get('/order/invoice/:orderId', authMiddleware, authorizeRoles('employee'), getInvoiceData);
 router.get('/order/:orderId/accessories', authMiddleware, authorizeRoles('employee'), getAccessoryDetailsForOrder);
 router.get('/order/full-invoice/:orderId', authMiddleware, authorizeRoles('employee'), getFullInvoiceData);

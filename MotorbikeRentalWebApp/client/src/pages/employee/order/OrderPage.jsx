@@ -80,6 +80,7 @@ const OrderPage = () => {
     const [imagePreview, setImagePreview] = useState({ visible: false, src: '', title: '' });
     const [maintenanceImages, setMaintenanceImages] = useState({});
     const [imageUrls, setImageUrls] = useState({});
+    const [cancelModal, setCancelModal] = useState({ visible: false, orderId: null, reason: '' });
 
     // Debug effect for image states
     useEffect(() => {
@@ -102,6 +103,48 @@ const OrderPage = () => {
             ...prev,
             [status]: { current: page, pageSize }
         }));
+    };
+
+    // Helper function to refresh orders list
+    const refreshOrdersList = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:8080/api/v1/employee/order/get-all', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOrders(data.rentalOrders || []);
+            }
+        } catch (error) {
+            console.error('Error refreshing orders:', error);
+        }
+    };
+
+    // Handle cancel order
+    const handleCancelOrder = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`http://localhost:8080/api/v1/employee/order/${cancelModal.orderId}/cancel`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason: cancelModal.reason })
+            });
+            const data = await res.json();
+            if (data.success) {
+                message.success('Hủy đơn hàng thành công!');
+                await refreshOrdersList();
+                setCancelModal({ visible: false, orderId: null, reason: '' });
+            } else {
+                message.error(data.message || 'Hủy đơn hàng thất bại');
+            }
+        } catch (error) {
+            console.error('Error cancelling order:', error);
+            message.error('Lỗi khi hủy đơn hàng');
+        }
     };
 
     useEffect(() => {
@@ -283,8 +326,7 @@ const OrderPage = () => {
             const checkoutData = await checkoutRes.json();
 
             if (checkoutData.success) {
-                // Update order status
-                setOrders(prev => prev.map(o => o._id === maintenanceModal.orderId ? { ...o, status: 'completed', checkOutDate: new Date() } : o));
+                await refreshOrdersList();
 
                 // Show checkout success message
                 message.success(checkoutData.message);
@@ -400,6 +442,51 @@ const OrderPage = () => {
             key: 'action',
             align: 'center',
             render: (_, record) => {
+                // Pending status: show cancel button
+                if (record.status === 'pending') {
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                            <Button
+                                danger
+                                onClick={() => setCancelModal({ visible: true, orderId: record._id, reason: '' })}
+                                style={{ minWidth: 120 }}
+                                block
+                            >
+                                Hủy đơn hàng
+                            </Button>
+                            <Button
+                                icon={<InfoCircleOutlined />}
+                                onClick={async () => {
+                                    setDetailLoading(true);
+                                    setModalVisible(true);
+                                    try {
+                                        const token = localStorage.getItem('token');
+                                        const res = await fetch(`http://localhost:8080/api/v1/employee/order/full-invoice/${record._id}`, {
+                                            headers: { Authorization: `Bearer ${token}` }
+                                        });
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            setOrderDetail(data.invoice);
+                                            setMotorbikeDetails(data.invoice.motorbikeDetails || []);
+                                            setAccessoryDetails(data.invoice.accessories || []);
+                                        } else {
+                                            setOrderDetail(null);
+                                            setMotorbikeDetails([]);
+                                            setAccessoryDetails([]);
+                                        }
+                                    } catch {
+                                        setOrderDetail(null);
+                                        setMotorbikeDetails([]);
+                                        setAccessoryDetails([]);
+                                    } finally {
+                                        setDetailLoading(false);
+                                    }
+                                }}
+                                style={{ minWidth: 40 }}
+                            />
+                        </div>
+                    );
+                }
                 // Confirmed status: show 3 actions
                 if (record.status === 'confirmed') {
                     const isPaid = record.isPaidFully;
@@ -421,7 +508,7 @@ const OrderPage = () => {
                                         const data = await res.json();
                                         if (data.success) {
                                             message.success('Đã hoàn thành thanh toán cho đơn này!');
-                                            setOrders(prev => prev.map(o => o._id === record._id ? { ...o, isPaidFully: true } : o));
+                                            await refreshOrdersList();
                                         } else {
                                             message.error(data.message || 'Cập nhật trạng thái thanh toán thất bại');
                                         }
@@ -475,11 +562,12 @@ const OrderPage = () => {
                                         const data = await res.json();
                                         if (data.success) {
                                             message.success('Check-in thành công!');
-                                            setOrders(prev => prev.map(o => o._id === record._id ? { ...o, status: 'active' } : o));
+                                            await refreshOrdersList();
                                         } else {
                                             message.error(data.message || 'Check-in thất bại');
                                         }
-                                    } catch {
+                                    } catch (error) {
+                                        console.error('Check-in error:', error);
                                         message.error('Lỗi khi check-in.');
                                     }
                                 }}
@@ -489,6 +577,14 @@ const OrderPage = () => {
                                 title={!dayjs().isSame(dayjs(record.receiveDate), 'day') ? 'Chỉ có thể check-in vào ngày nhận xe' : undefined}
                             >
                                 Check-in
+                            </Button>
+                            <Button
+                                danger
+                                onClick={() => setCancelModal({ visible: true, orderId: record._id, reason: '' })}
+                                style={{ minWidth: 120 }}
+                                block
+                            >
+                                Hủy đơn hàng
                             </Button>
                             <Button
                                 onClick={() => {
@@ -794,10 +890,38 @@ const OrderPage = () => {
                         <div style={{ lineHeight: 2 }}>
                             <div><b>Mã đơn:</b> {orderDetail.orderCode}</div>
                             <div><b>Trạng thái:</b> <Tag color={statusMap[orderDetail.status]?.color}>{statusMap[orderDetail.status]?.label || orderDetail.status}</Tag></div>
-                            <div><b>Nhận xe:</b> {orderDetail.branchReceive?.city || 'N/A'} - {orderDetail.branchReceive?.address || ''}</div>
-                            <div><b>Trả xe:</b> {orderDetail.branchReturn?.city || 'N/A'} - {orderDetail.branchReturn?.address || ''}</div>
+
+                            {/* Thông tin khách hàng */}
+                            {orderDetail.customerId && (
+                                <div style={{ marginBottom: 8 }}>
+                                    <b>Thông tin khách hàng:</b>
+                                    <div style={{ marginLeft: 16, marginTop: 4 }}>
+                                        <div><b>Họ tên:</b> {orderDetail.customerId.fullName || 'N/A'}</div>
+                                        <div><b>Số điện thoại:</b> {orderDetail.customerId.phone || 'N/A'}</div>
+                                        <div><b>Email:</b> {orderDetail.customerId.email || 'N/A'}</div>
+                                    </div>
+                                </div>
+                            )}
+                            <div style={{ marginBottom: 8 }}>
+                                <b>Nhận xe:</b>
+                                <div style={{ marginLeft: 16, marginTop: 4 }}>
+                                    <div><b>Chi nhánh:</b> {orderDetail.branchReceive?.name || 'N/A'}</div>
+                                    <div><b>Địa chỉ:</b> {orderDetail.branchReceive?.address || 'N/A'}</div>
+                                    <div><b>Thành phố:</b> {orderDetail.branchReceive?.city || 'N/A'}</div>
+                                    <div><b>Địa chỉ nhận xe:</b> {orderDetail.receiveAddress || 'Tại chi nhánh'}</div>
+                                </div>
+                            </div>
+                            <div style={{ marginBottom: 8 }}>
+                                <b>Trả xe:</b>
+                                <div style={{ marginLeft: 16, marginTop: 4 }}>
+                                    <div><b>Chi nhánh:</b> {orderDetail.branchReturn?.name || 'N/A'}</div>
+                                    <div><b>Địa chỉ:</b> {orderDetail.branchReturn?.address || 'N/A'}</div>
+                                    <div><b>Thành phố:</b> {orderDetail.branchReturn?.city || 'N/A'}</div>
+                                </div>
+                            </div>
                             <div><b>Ngày nhận:</b> {dayjs(orderDetail.receiveDate).format('DD/MM/YYYY HH:mm')}</div>
                             <div><b>Ngày trả:</b> {dayjs(orderDetail.returnDate).format('DD/MM/YYYY HH:mm')}</div>
+                            <div><b>Ngày tạo đơn:</b> {dayjs(orderDetail.createdAt).format('DD/MM/YYYY HH:mm')}</div>
                             <div><b>Tổng tiền:</b> {orderDetail.grandTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
                             <div><b>Đặt cọc trước:</b> {orderDetail.preDepositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
                             <div><b>Đặt cọc khi nhận xe:</b> {orderDetail.depositTotal?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</div>
@@ -913,7 +1037,7 @@ const OrderPage = () => {
                                     if (data.success) {
                                         const messageText = newIsValid ? 'Đã xác nhận giấy tờ hợp lệ!' : 'Đã đánh dấu giấy tờ chưa chính xác!';
                                         message.success(messageText);
-                                        setOrders(prev => prev.map(o => o._id === documentModal.orderId ? { ...o, documentsValid: newIsValid } : o));
+                                        await refreshOrdersList();
                                         setDocumentModal({
                                             visible: false,
                                             orderId: null,
@@ -1413,6 +1537,48 @@ const OrderPage = () => {
                         >
                             Không thể tải ảnh
                         </div>
+                    </div>
+                </Modal>
+
+                {/* Cancel Order Modal */}
+                <Modal
+                    title="Hủy đơn hàng"
+                    visible={cancelModal.visible}
+                    onCancel={() => setCancelModal({ visible: false, orderId: null, reason: '' })}
+                    footer={[
+                        <Button
+                            key="cancel"
+                            onClick={() => setCancelModal({ visible: false, orderId: null, reason: '' })}
+                        >
+                            Đóng
+                        </Button>,
+                        <Button
+                            key="confirm"
+                            type="primary"
+                            danger
+                            onClick={handleCancelOrder}
+                        >
+                            Xác nhận hủy
+                        </Button>
+                    ]}
+                    width={500}
+                >
+                    <div style={{ marginBottom: 16 }}>
+                        <p>Bạn có chắc chắn muốn hủy đơn hàng này không?</p>
+                        <p style={{ color: '#666', fontSize: 14 }}>
+                            Hành động này không thể hoàn tác. Đơn hàng sẽ được chuyển sang trạng thái "Đã hủy".
+                        </p>
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+                            Lý do hủy (tùy chọn):
+                        </label>
+                        <TextArea
+                            rows={3}
+                            placeholder="Nhập lý do hủy đơn hàng..."
+                            value={cancelModal.reason}
+                            onChange={(e) => setCancelModal(prev => ({ ...prev, reason: e.target.value }))}
+                        />
                     </div>
                 </Modal>
             </div>

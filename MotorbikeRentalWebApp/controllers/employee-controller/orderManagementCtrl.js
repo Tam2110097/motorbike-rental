@@ -11,6 +11,47 @@ const orderDocumentModel = require('../../models/orderDocumentModels');
 const dayjs = require('dayjs');
 const cron = require('node-cron');
 
+// Cancel order (for employees)
+const cancelOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        const rentalOrder = await rentalOrderModel.findById(id);
+        if (!rentalOrder) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy đơn hàng'
+            });
+        }
+
+        // Kiểm tra trạng thái đơn hàng - chỉ cho phép hủy đơn hàng chưa active hoặc completed
+        if (rentalOrder.status === 'active' || rentalOrder.status === 'completed' || rentalOrder.status === 'cancelled') {
+            return res.status(400).json({
+                success: false,
+                message: 'Không thể hủy đơn hàng đang sử dụng, đã hoàn thành hoặc đã hủy'
+            });
+        }
+
+        // Cập nhật trạng thái đơn hàng
+        rentalOrder.status = 'cancelled';
+        await rentalOrder.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Hủy đơn hàng thành công',
+            rentalOrder
+        });
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi hủy đơn hàng',
+            error: error.message
+        });
+    }
+};
+
 // Helper function to format refund reason
 const formatRefundReason = (remainingDays, remainingHours) => {
     if (remainingDays > 0 && remainingHours > 0) {
@@ -622,6 +663,7 @@ const validateOrderDocuments = async (req, res) => {
 module.exports = {
     getAllOrders,
     getOrderById,
+    cancelOrder,
     getInvoiceData,
     getAccessoryDetailsForOrder,
     getFullInvoiceData,
