@@ -1,44 +1,41 @@
 import { Link } from "react-router-dom";
-import {
-    LaptopOutlined, NotificationOutlined, UserOutlined,
-    HomeOutlined, MoneyCollectOutlined, BranchesOutlined,
-    SettingOutlined,
-} from '@ant-design/icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMotorcycle, faHome, faUser, faTools, faReceipt, faMoneyBillWave, faMapMarkerAlt, faBuilding, faCog, faChartLine } from '@fortawesome/free-solid-svg-icons';
 // =================Employee Menu================
 export const employeeMenu = [
     {
         path: "/employee",
-        icon: HomeOutlined,
+        icon: () => <FontAwesomeIcon icon={faHome} />,
         label: "Home"
     },
     {
         path: "/employee/accessory",
-        icon: UserOutlined,
+        icon: () => <FontAwesomeIcon icon={faUser} />,
         label: "Quản lý phụ kiện"
     },
     {
         path: "/employee/motorbike",
-        icon: HomeOutlined,
+        icon: () => <FontAwesomeIcon icon={faMotorcycle} />,
         label: "Quản lý xe máy"
     },
     {
         path: "/employee/maintenance",
-        icon: NotificationOutlined,
+        icon: () => <FontAwesomeIcon icon={faTools} />,
         label: "Quản lý bảo trì",
     },
     {
         path: "/employee/order",
-        icon: NotificationOutlined,
+        icon: () => <FontAwesomeIcon icon={faReceipt} />,
         label: "Quản lý đơn hàng",
     },
     {
         path: "/employee/refund",
-        icon: NotificationOutlined,
+        icon: () => <FontAwesomeIcon icon={faMoneyBillWave} />,
         label: "Quản lý hoàn tiền",
     },
     {
         path: "/employee/location",
-        icon: NotificationOutlined,
+        icon: () => <FontAwesomeIcon icon={faMapMarkerAlt} />,
         label: "Theo dõi vị trí xe máy"
     }
 ]
@@ -47,42 +44,42 @@ export const employeeMenu = [
 export const adminMenu = [
     {
         path: "/admin",
-        icon: HomeOutlined,
+        icon: () => <FontAwesomeIcon icon={faHome} />,
         label: "Home"
     },
     {
         path: "/admin/account",
-        icon: UserOutlined,
+        icon: () => <FontAwesomeIcon icon={faUser} />,
         label: "Quản lý tài khoản"
     },
     {
         path: "/admin/branch",
-        icon: BranchesOutlined,
+        icon: () => <FontAwesomeIcon icon={faBuilding} />,
         label: "Quản lý chi nhánh"
     },
     {
         path: "/admin/motorbike-type",
-        icon: HomeOutlined,
+        icon: () => <FontAwesomeIcon icon={faMotorcycle} />,
         label: "Quản lý loại xe máy"
     },
     {
         path: "/admin/pricing-rule",
-        icon: MoneyCollectOutlined,
+        icon: () => <FontAwesomeIcon icon={faMoneyBillWave} />,
         label: "Quy tắc giá thuê"
     },
     {
         path: "/admin/specification",
-        icon: SettingOutlined,
+        icon: () => <FontAwesomeIcon icon={faCog} />,
         label: "Quản lý thông số kỹ thuật"
     },
     {
         path: "/admin/feedback",
-        icon: NotificationOutlined,
+        icon: () => <FontAwesomeIcon icon={faReceipt} />,
         label: "Báo cáo từ khách hàng",
     },
     {
         path: "/admin/demand-prediction",
-        icon: LaptopOutlined,
+        icon: () => <FontAwesomeIcon icon={faChartLine} />,
         label: "Xem dự đoán nhu cầu",
     },
 ]

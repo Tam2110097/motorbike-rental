@@ -157,14 +157,19 @@ const LocationTrackingPage = () => {
 
                         const [lat, lng] = currentPos;
 
-                        // Di chuyển ngẫu nhiên (giống như REALTIME_TRACKER)
-                        const movementDistance = 0.00009 + Math.random() * 0.00009; // 5-10 meters
-                        const angle = Math.random() * 2 * Math.PI; // Random direction
+                        // Khoảng dịch chuyển ngẫu nhiên 5 - 10 mét
+                        const movementDistance = 5 + Math.random() * 5; // meters
+                        const angle = Math.random() * 2 * Math.PI; // Hướng ngẫu nhiên (0 - 360°)
 
-                        const newLat = lat + Math.cos(angle) * movementDistance;
-                        const newLng = lng + Math.sin(angle) * movementDistance;
+                        // Đổi mét sang độ
+                        const deltaLat = (Math.cos(angle) * movementDistance) / 111320;
+                        const deltaLng = (Math.sin(angle) * movementDistance) / (111320 * Math.cos(lat * Math.PI / 180));
+
+                        const newLat = lat + deltaLat;
+                        const newLng = lng + deltaLng;
 
                         const newPos = [newLat, newLng];
+
                         console.log(`Xe ${item.motorbike.code} di chuyển từ [${lat.toFixed(6)}, ${lng.toFixed(6)}] đến [${newLat.toFixed(6)}, ${newLng.toFixed(6)}]`);
 
                         // Gửi vị trí mới về backend
@@ -686,7 +691,7 @@ const LocationTrackingPage = () => {
                 </style>
 
                 <div className="location-tracking-header">
-                    <h1>🚗 Theo dõi vị trí GPS</h1>
+                    <h1>Theo dõi vị trí GPS</h1>
                     <p>Giám sát vị trí xe đang thuê theo thời gian thực với cập nhật trực tiếp</p>
                 </div>
 
