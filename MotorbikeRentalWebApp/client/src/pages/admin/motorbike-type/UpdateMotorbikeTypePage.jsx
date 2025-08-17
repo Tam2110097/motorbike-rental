@@ -13,6 +13,7 @@ const UpdateMotorbikeTypePage = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [pricingRuleList, setPricingRuleList] = useState([]);
     const [initialImage, setInitialImage] = useState("");
+    const [originalImage, setOriginalImage] = useState(""); // Backup cho ảnh gốc
 
     const getAllPricingRules = async () => {
         try {
@@ -57,6 +58,11 @@ const UpdateMotorbikeTypePage = () => {
                 // Thêm domain vào đường dẫn hình ảnh nếu chưa có
                 const imageUrl = data.image.startsWith('http') ? data.image : `http://localhost:8080${data.image}`;
                 setInitialImage(imageUrl);
+                setOriginalImage(imageUrl); // Backup ảnh gốc
+                console.log('Initial image set:', imageUrl); // Debug log
+
+                // Cập nhật form value cho image
+                form.setFieldsValue({ image: imageUrl });
             }
         } catch {
             message.error("Không thể tải thông tin loại xe");
@@ -69,9 +75,16 @@ const UpdateMotorbikeTypePage = () => {
         // eslint-disable-next-line
     }, [id]);
 
+    // Debug: Theo dõi initialImage
+    useEffect(() => {
+        console.log('Initial image changed:', initialImage);
+    }, [initialImage]);
+
     const onFinishHandler = async (values) => {
         try {
-            let imageUrl = initialImage; // Sử dụng hình ảnh hiện tại làm mặc định
+            let imageUrl = null;
+
+            // Nếu có file mới được chọn thì upload
             if (selectedFile) {
                 const formData = new FormData();
                 formData.append("file", selectedFile);
@@ -89,34 +102,55 @@ const UpdateMotorbikeTypePage = () => {
                     return;
                 }
                 imageUrl = uploadRes.data.url;
+            } else {
+                // Nếu không có file mới, sử dụng ảnh gốc
+                imageUrl = originalImage || initialImage;
             }
+
+            if (!imageUrl) {
+                message.error("Vui lòng chọn ảnh hoặc giữ ảnh hiện tại!");
+                return;
+            }
+
+            console.log('Submitting with image URL:', imageUrl); // Debug log
+            console.log('Initial image:', initialImage); // Debug log
+            console.log('Original image:', originalImage); // Debug log
+            console.log('Selected file:', selectedFile); // Debug log
+
+            const requestData = {
+                name: values.name,
+                price: Number(values.price),
+                totalQuantity: Number(values.totalQuantity),
+                image: imageUrl,
+                description: values.description,
+                deposit: Number(values.deposit),
+                prefixCode: values.prefixCode,
+                preDeposit: Number(values.preDeposit),
+                dailyDamageWaiver: Number(values.dailyDamageWaiver),
+                pricingRule: values.pricingRule,
+            };
+
+            console.log('Request data being sent:', requestData); // Debug log
+
             const res = await axios.put(
                 `http://localhost:8080/api/v1/admin/motorbike-type/update/${id}`,
-                {
-                    name: values.name,
-                    price: Number(values.price),
-                    totalQuantity: Number(values.totalQuantity),
-                    image: imageUrl,
-                    description: values.description,
-                    deposit: Number(values.deposit),
-                    prefixCode: values.prefixCode,
-                    preDeposit: Number(values.preDeposit),
-                    dailyDamageWaiver: Number(values.dailyDamageWaiver),
-                    pricingRule: values.pricingRule,
-                },
+                requestData,
                 {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`
                     }
                 }
             );
+            console.log('Server response:', res.data); // Debug log
+
             if (res.data.success) {
                 message.success("Cập nhật loại xe thành công");
                 navigate("/admin/motorbike-type");
             } else {
                 message.error(res.data.message);
             }
-        } catch {
+        } catch (error) {
+            console.error('Error updating motorbike type:', error);
             message.error("Có lỗi xảy ra, vui lòng thử lại");
         }
     };
@@ -254,7 +288,9 @@ const UpdateMotorbikeTypePage = () => {
                             initImage={initialImage}
                             onFileSelect={(file) => {
                                 setSelectedFile(file);
-                                // Không cần set form value vì chúng ta sẽ sử dụng initialImage nếu không có file mới
+                                // Cập nhật form value khi chọn file mới
+                                form.setFieldsValue({ image: file.name });
+                                console.log('File selected:', file.name); // Debug log
                             }}
                         />
                     </Form.Item>

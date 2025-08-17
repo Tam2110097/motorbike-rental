@@ -11,6 +11,9 @@ const CreateMotorbikeTypePage = () => {
     const navigate = useNavigate();
     const [selectedFile, setSelectedFile] = useState(null);
     const [pricingRuleList, setPricingRuleList] = useState([]);
+    const [isDepositEdited, setIsDepositEdited] = useState(false);
+    const [isPreDepositEdited, setIsPreDepositEdited] = useState(false);
+    const [isDamageWaiverEdited, setIsDamageWaiverEdited] = useState(false);
 
     const getAllPricingRules = async () => {
         try {
@@ -97,41 +100,49 @@ const CreateMotorbikeTypePage = () => {
                 {/* Back Button */}
                 <BackButton path="/admin/motorbike-type" />
                 <Form
-                    style={{ maxWidth: 600, margin: "0 auto" }}
                     form={form}
                     layout="vertical"
+                    style={{ maxWidth: 600, margin: "0 auto" }}
                     onFinish={onFinishHandler}
                     onValuesChange={(changedValues) => {
                         const currentValues = form.getFieldsValue();
                         const price = parseFloat(currentValues.price);
 
-                        if (!isNaN(price)) {
-                            const autoDeposit = Math.floor(price * 0.3);
-                            const autoPreDeposit = Math.floor(autoDeposit * 0.5);
-                            const autoDailyDamageWaiver = Math.floor(price * 0.01);
-                            form.setFieldsValue({
-                                deposit: autoDeposit,
-                                preDeposit: autoPreDeposit,
-                                dailyDamageWaiver: autoDailyDamageWaiver,
-                            });
+                        // Nếu user thay đổi giá thì chỉ auto cập nhật nếu field chưa bị chỉnh sửa tay
+                        if (changedValues.price && !isNaN(price)) {
+                            if (!isDepositEdited) {
+                                const autoDeposit = Math.floor(price * 0.3);
+                                form.setFieldsValue({ deposit: autoDeposit });
+                            }
+                            if (!isPreDepositEdited) {
+                                const autoPreDeposit = Math.floor(price * 0.3 * 0.5);
+                                form.setFieldsValue({ preDeposit: autoPreDeposit });
+                            }
+                            if (!isDamageWaiverEdited) {
+                                const autoDailyDamageWaiver = Math.floor(price * 0.01);
+                                form.setFieldsValue({ dailyDamageWaiver: autoDailyDamageWaiver });
+                            }
                         }
 
-                        // Nếu người dùng thay đổi deposit thủ công (nếu cho phép), cũng cập nhật lại preDeposit
-                        if (changedValues.deposit) {
+                        // Nếu user thay đổi deposit thủ công thì ghi nhận là "đã chỉnh sửa tay"
+                        if (changedValues.deposit !== undefined) {
+                            setIsDepositEdited(true);
                             const deposit = parseFloat(changedValues.deposit);
-                            if (!isNaN(deposit)) {
+                            if (!isNaN(deposit) && !isPreDepositEdited) {
                                 form.setFieldsValue({
                                     preDeposit: Math.floor(deposit * 0.3),
                                 });
                             }
                         }
-                    }}
 
-                    initialValues={
-                        {
-                            totalQuantity: 0,
+                        if (changedValues.preDeposit !== undefined) {
+                            setIsPreDepositEdited(true);
                         }
-                    }
+
+                        if (changedValues.dailyDamageWaiver !== undefined) {
+                            setIsDamageWaiverEdited(true);
+                        }
+                    }}
                 >
                     <h3 className="text-center">Thêm loại xe</h3>
 
@@ -157,6 +168,7 @@ const CreateMotorbikeTypePage = () => {
                     <Form.Item
                         label="Số lượng"
                         name="totalQuantity"
+                        initialValue={0}
                         rules={[
                             { required: true, message: "Vui lòng nhập số lượng" },
                             { pattern: /^[0-9]+$/, message: "Số lượng phải là số" },

@@ -44,10 +44,28 @@ const getMotorbikeTypeById = async (req, res) => {
 // Update Motorbike Type
 const updateMotorbikeType = async (req, res) => {
     try {
-        const updatedType = await motorbikeTypeModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        console.log('Update request body:', req.body); // Debug log
+
+        // Xử lý URL ảnh - chuyển từ URL đầy đủ về đường dẫn tương đối
+        let updateData = { ...req.body };
+        if (updateData.image && updateData.image.startsWith('http://localhost:8080')) {
+            updateData.image = updateData.image.replace('http://localhost:8080', '');
+        }
+
+        console.log('Processed update data:', updateData); // Debug log
+
+        const updatedType = await motorbikeTypeModel.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        ).populate('pricingRule').populate('specifications');
+
         if (!updatedType) return res.status(404).json({ success: false, message: 'Motorbike type not found' });
+
+        console.log('Updated motorbike type:', updatedType); // Debug log
         res.status(200).json({ success: true, message: 'Motorbike type updated', motorbikeType: updatedType });
     } catch (error) {
+        console.error('Error updating motorbike type:', error); // Debug log
         res.status(400).json({ success: false, message: error.message });
     }
 };

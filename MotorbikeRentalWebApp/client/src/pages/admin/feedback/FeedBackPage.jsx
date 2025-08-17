@@ -32,7 +32,7 @@ const FeedBackPage = () => {
 
     return (
         <AdminLayout>
-            <h2 className="text-center">Feed Back Page</h2>
+            <h2 className="text-center">Phản hồi từ khách hàng</h2>
             {loading ? (
                 <div>Loading...</div>
             ) : error ? (
@@ -41,16 +41,16 @@ const FeedBackPage = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
                     <thead>
                         <tr>
-                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Customer</th>
-                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Score</th>
-                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Comment</th>
-                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Order Info</th>
-                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Created At</th>
+                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Khách hàng</th>
+                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Điểm hài lòng</th>
+                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Đánh giá</th>
+                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Thông tin đơn hàng</th>
+                            <th style={{ border: '1px solid #ccc', padding: 8 }}>Ngày tạo</th>
                         </tr>
                     </thead>
                     <tbody>
                         {feedbacks.length === 0 ? (
-                            <tr><td colSpan={5} style={{ textAlign: 'center' }}>No feedback found.</td></tr>
+                            <tr><td colSpan={5} style={{ textAlign: 'center' }}>Không tìm thấy phản hồi.</td></tr>
                         ) : feedbacks.map(fb => {
                             const order = fb.rentalOrderId;
                             return (
@@ -59,17 +59,17 @@ const FeedBackPage = () => {
                                     <td style={{ border: '1px solid #ccc', padding: 8 }}>{fb.satisfactionScore}</td>
                                     <td style={{ border: '1px solid #ccc', padding: 8 }}>{fb.comment}</td>
                                     <td style={{ border: '1px solid #ccc', padding: 8 }}>
-                                        <div><b>Order ID:</b> {order?._id || 'N/A'}</div>
-                                        <div><b>Branch Receive:</b> {order?.branchReceive ? `${order.branchReceive.city}, ${order.branchReceive.address}` : 'N/A'}</div>
-                                        <div><b>Branch Return:</b> {order?.branchReturn ? `${order.branchReturn.city}, ${order.branchReturn.address}` : 'N/A'}</div>
-                                        <div><b>Motorbikes:</b>
+                                        <div><b>Mã đơn hàng:</b> {order?._id || 'N/A'}</div>
+                                        <div><b>Chi nhánh nhận xe:</b> {order?.branchReceive ? `${order.branchReceive.city}, ${order.branchReceive.address}` : 'N/A'}</div>
+                                        <div><b>Chi nhánh trả xe:</b> {order?.branchReturn ? `${order.branchReturn.city}, ${order.branchReturn.address}` : 'N/A'}</div>
+                                        <div><b>Thông tin xe thuê:</b>
                                             {order?.motorbikes && order.motorbikes.length > 0 ? (
                                                 <table style={{ width: '100%', border: '1px solid #eee', marginTop: 4 }}>
                                                     <thead>
                                                         <tr>
-                                                            <th style={{ border: '1px solid #eee', padding: 4 }}>Type</th>
-                                                            <th style={{ border: '1px solid #eee', padding: 4 }}>Code</th>
-                                                            <th style={{ border: '1px solid #eee', padding: 4 }}>Status</th>
+                                                            <th style={{ border: '1px solid #eee', padding: 4 }}>Loại</th>
+                                                            <th style={{ border: '1px solid #eee', padding: 4 }}>Mã xe</th>
+                                                            {/* <th style={{ border: '1px solid #eee', padding: 4 }}>Trạng thái</th> */}
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -77,7 +77,7 @@ const FeedBackPage = () => {
                                                             <tr key={idx}>
                                                                 <td style={{ border: '1px solid #eee', padding: 4 }}>{mb.motorbikeTypeId?.name || '-'}</td>
                                                                 <td style={{ border: '1px solid #eee', padding: 4 }}>{mb.motorbikeId?.code || '-'}</td>
-                                                                <td style={{ border: '1px solid #eee', padding: 4 }}>{mb.motorbikeId?.status || '-'}</td>
+                                                                {/* <td style={{ border: '1px solid #eee', padding: 4 }}>{mb.motorbikeId?.status || '-'}</td> */}
                                                             </tr>
                                                         ))}
                                                     </tbody>

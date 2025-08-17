@@ -13,18 +13,44 @@ const CreateSpecificationPage = () => {
     useEffect(() => {
         const fetchMotorbikeTypes = async () => {
             try {
-                const res = await axios.get('http://localhost:8080/api/v1/admin/motorbike-type/get-without-spec',
+                const token = localStorage.getItem('token');
+                console.log('Token:', token ? 'Token exists' : 'No token found');
+
+                if (!token) {
+                    console.error('No authentication token found');
+                    message.error('Vui lòng đăng nhập lại');
+                    return;
+                }
+
+                // Debug: Decode token to check role
+                try {
+                    const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+                    console.log('Token payload:', tokenPayload);
+                    console.log('User role:', tokenPayload.role);
+                } catch (e) {
+                    console.error('Error decoding token:', e);
+                }
+
+                const res = await axios.get('http://localhost:8080/api/v1/admin/motorbike-type/get-all-without-spec',
                     {
                         headers: {
-                            Authorization: `Bearer ${localStorage.getItem('token')}`
+                            Authorization: `Bearer ${token}`
                         }
                     }
                 );
                 if (res.data.success) {
                     setMotorbikeTypes(res.data.motorbikeTypes);
+                    console.log('Motorbike types loaded:', res.data.motorbikeTypes.length);
                 }
             } catch (error) {
-                console.log(error);
+                console.error('Error fetching motorbike types:', error.response?.status, error.response?.data);
+                if (error.response?.status === 401) {
+                    message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                } else if (error.response?.status === 403) {
+                    message.error('Bạn không có quyền truy cập. Vui lòng đăng nhập với tài khoản admin.');
+                } else {
+                    message.error('Có lỗi xảy ra khi tải danh sách loại xe');
+                }
             }
         };
         fetchMotorbikeTypes();
@@ -32,7 +58,20 @@ const CreateSpecificationPage = () => {
 
     const onFinishHandler = async (values) => {
         try {
-            const res = await axios.post('http://localhost:8080/api/v1/admin/spec/create', values);
+            const token = localStorage.getItem('token');
+            console.log('Submitting with token:', token ? 'Token exists' : 'No token');
+
+            if (!token) {
+                message.error('Vui lòng đăng nhập lại');
+                return;
+            }
+
+            const res = await axios.post('http://localhost:8080/api/v1/admin/spec/create', values, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
             if (res.data.success) {
                 message.success('Thêm thông số kỹ thuật thành công');
                 navigate('/admin/specification');
@@ -40,7 +79,12 @@ const CreateSpecificationPage = () => {
                 message.error(res.data.message);
             }
         } catch (error) {
-            message.error(error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại');
+            console.error('Error creating spec:', error.response?.status, error.response?.data);
+            if (error.response?.status === 401) {
+                message.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+            } else {
+                message.error(error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại');
+            }
         }
     };
 
